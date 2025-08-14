@@ -11,6 +11,7 @@ function App() {
   const [connectToAddress, setConnectToAddress] = useState('')
   const [connections, setConnections] = useState([])
   const animationRef = useRef()
+  const mouseHistoryRef = useRef([])
 
   // Animation loop for floating circles with momentum
   useEffect(() => {
@@ -28,24 +29,26 @@ function App() {
           let newVelocityY = circle.velocityY
 
           // Apply air resistance to gradually slow down movement
-          newVelocityX *= 0.995
-          newVelocityY *= 0.995
+          newVelocityX *= 0.998
+          newVelocityY *= 0.998
 
           // Bounce off walls (accounting for circle radius)
           if (newX <= 30 || newX >= window.innerWidth - 30) {
-            newVelocityX = -newVelocityX * 0.9 // Some energy loss on bounce
+            newVelocityX = -newVelocityX * 0.8 // Energy loss on bounce
             newX = newX <= 30 ? 30 : window.innerWidth - 30
           }
           
           // Bounce off top and bottom
           if (newY <= 30 || newY >= window.innerHeight - 30) {
-            newVelocityY = -newVelocityY * 0.9 // Some energy loss on bounce
+            newVelocityY = -newVelocityY * 0.8 // Energy loss on bounce
             newY = newY <= 30 ? 30 : window.innerHeight - 30
           }
 
           // Stop movement if velocity is very low
-          if (Math.abs(newVelocityX) < 0.1 && Math.abs(newVelocityY) < 0.1) {
+          if (Math.abs(newVelocityX) < 0.1) {
             newVelocityX = 0
+          }
+          if (Math.abs(newVelocityY) < 0.1) {
             newVelocityY = 0
           }
 
@@ -81,6 +84,13 @@ function App() {
       x: e.clientX - rect.left - 30,
       y: e.clientY - rect.top - 30
     })
+    
+    // Initialize mouse history for velocity tracking
+    mouseHistoryRef.current = [{
+      x: e.clientX,
+      y: e.clientY,
+      time: Date.now()
+    }]
   }
 
   // Double click handler for connection popup
@@ -120,6 +130,19 @@ function App() {
         const newX = e.clientX - dragOffset.x
         const newY = e.clientY - dragOffset.y
         
+        // Track mouse history for velocity calculation
+        const now = Date.now()
+        mouseHistoryRef.current.push({
+          x: e.clientX,
+          y: e.clientY,
+          time: now
+        })
+        
+        // Keep only recent history (last 100ms)
+        mouseHistoryRef.current = mouseHistoryRef.current.filter(
+          entry => now - entry.time < 100
+        )
+        
         setCircles(prevCircles =>
           prevCircles.map(circle =>
             circle.id === draggedCircle.id
@@ -131,8 +154,40 @@ function App() {
     }
 
     const handleMouseUpGlobal = () => {
+      if (draggedCircle) {
+        // Calculate velocity from mouse history
+        let velocityX = 0
+        let velocityY = 0
+        
+        if (mouseHistoryRef.current.length >= 2) {
+          const recent = mouseHistoryRef.current[mouseHistoryRef.current.length - 1]
+          const older = mouseHistoryRef.current[0]
+          const timeDiff = recent.time - older.time
+          
+          if (timeDiff > 0) {
+            velocityX = (recent.x - older.x) / timeDiff * 16 // Scale for smooth movement
+            velocityY = (recent.y - older.y) / timeDiff * 16
+            
+            // Limit maximum velocity
+            const maxVelocity = 15
+            velocityX = Math.max(-maxVelocity, Math.min(maxVelocity, velocityX))
+            velocityY = Math.max(-maxVelocity, Math.min(maxVelocity, velocityY))
+          }
+        }
+        
+        // Apply calculated velocity to the released circle
+        setCircles(prevCircles =>
+          prevCircles.map(circle =>
+            circle.id === draggedCircle.id
+              ? { ...circle, velocityX, velocityY }
+              : circle
+          )
+        )
+      }
+      
       setDraggedCircle(null)
       setDragOffset({ x: 0, y: 0 })
+      mouseHistoryRef.current = []
     }
 
     document.addEventListener('mousemove', handleMouseMoveGlobal)
