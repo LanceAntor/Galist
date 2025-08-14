@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
 function App() {
@@ -12,6 +12,30 @@ function App() {
   const [connections, setConnections] = useState([])
   const animationRef = useRef()
   const mouseHistoryRef = useRef([])
+  const [leftSquareOpen, setLeftSquareOpen] = useState(false)
+
+  // Function to find all connected circles recursively
+  const findConnectedCircles = useCallback((circleId, visited = new Set()) => {
+    if (visited.has(circleId)) return []
+    visited.add(circleId)
+    
+    const connected = [circleId]
+    connections.forEach(connection => {
+      if (connection.from === circleId && !visited.has(connection.to)) {
+        connected.push(...findConnectedCircles(connection.to, visited))
+      }
+      if (connection.to === circleId && !visited.has(connection.from)) {
+        connected.push(...findConnectedCircles(connection.from, visited))
+      }
+    })
+    
+    return connected
+  }, [connections])
+
+  // Toggle left square state
+  const toggleLeftSquare = () => {
+    setLeftSquareOpen(!leftSquareOpen)
+  }
 
   // Animation loop for floating circles with momentum
   useEffect(() => {
@@ -27,6 +51,85 @@ function App() {
           let newY = circle.y + circle.velocityY
           let newVelocityX = circle.velocityX
           let newVelocityY = circle.velocityY
+
+          // Add suction effect when left square is open
+          if (leftSquareOpen) {
+            const leftSquareCenter = { x: 65, y: window.innerHeight / 2 }
+            const dx = leftSquareCenter.x - circle.x
+            const dy = leftSquareCenter.y - circle.y
+            const distance = Math.sqrt(dx * dx + dy * dy)
+            
+            if (distance > 80) { // Only apply suction if not too close
+              const suctionForce = 0.1
+              newVelocityX += (dx / distance) * suctionForce
+              newVelocityY += (dy / distance) * suctionForce
+            }
+          }
+
+          // Update positions with velocities
+          newX = circle.x + newVelocityX
+          newY = circle.y + newVelocityY
+
+          // Check collision with left square (suction box)
+          const leftSquareLeft = 0
+          const leftSquareRight = 130
+          const leftSquareTop = (window.innerHeight / 2) - 50
+          const leftSquareBottom = (window.innerHeight / 2) + 50
+          const entranceTop = leftSquareTop + 10  // x2 position (10px from top)
+          const entranceBottom = leftSquareBottom - 10  // y2 position (10px from bottom)
+          const circleRadius = 30
+
+          // Check if circle is colliding with left square
+          if (newX - circleRadius <= leftSquareRight && 
+              newX + circleRadius >= leftSquareLeft && 
+              newY - circleRadius <= leftSquareBottom && 
+              newY + circleRadius >= leftSquareTop) {
+            
+            // Check if circle is entering through the entrance (right side between x2 and y2)
+            if (leftSquareOpen && 
+                newX - circleRadius <= leftSquareRight && 
+                newX - circleRadius >= leftSquareRight - 20 && 
+                newY >= entranceTop && 
+                newY <= entranceBottom) {
+              
+              // Circle entered through entrance - mark for deletion
+              const connectedIds = findConnectedCircles(circle.id)
+              
+              // Remove circles and their connections
+              setTimeout(() => {
+                setCircles(prevCircles => 
+                  prevCircles.filter(c => !connectedIds.includes(c.id))
+                )
+                setConnections(prevConnections => 
+                  prevConnections.filter(connection => 
+                    !connectedIds.includes(connection.from) && 
+                    !connectedIds.includes(connection.to)
+                  )
+                )
+              }, 0)
+              
+              return circle // Return unchanged for this frame
+            } else {
+              // Bounce off the walls of the left square
+              if (newX - circleRadius <= leftSquareRight && circle.x - circleRadius > leftSquareRight) {
+                // Hit right wall
+                newVelocityX = Math.abs(newVelocityX) * 0.8
+                newX = leftSquareRight + circleRadius
+              }
+              if (newY - circleRadius <= leftSquareBottom && newY + circleRadius >= leftSquareTop) {
+                // Hit top or bottom wall
+                if (newY < leftSquareTop + 50) {
+                  // Hit top wall
+                  newVelocityY = -Math.abs(newVelocityY) * 0.8
+                  newY = leftSquareTop - circleRadius
+                } else {
+                  // Hit bottom wall
+                  newVelocityY = Math.abs(newVelocityY) * 0.8
+                  newY = leftSquareBottom + circleRadius
+                }
+              }
+            }
+          }
 
           // Apply air resistance to gradually slow down movement
           newVelocityX *= 0.998
@@ -73,7 +176,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [circles.length, draggedCircle])
+  }, [circles.length, draggedCircle, leftSquareOpen, findConnectedCircles])
 
   // Mouse event handlers for dragging
   const handleMouseDown = (e, circle) => {
@@ -155,7 +258,7 @@ function App() {
 
     const handleMouseUpGlobal = () => {
       if (draggedCircle) {
-        // Calculate velocity from mouse history
+        // Normal velocity calculation for all cases
         let velocityX = 0
         let velocityY = 0
         
@@ -165,17 +268,15 @@ function App() {
           const timeDiff = recent.time - older.time
           
           if (timeDiff > 0) {
-            velocityX = (recent.x - older.x) / timeDiff * 16 // Scale for smooth movement
+            velocityX = (recent.x - older.x) / timeDiff * 16
             velocityY = (recent.y - older.y) / timeDiff * 16
             
-            // Limit maximum velocity
             const maxVelocity = 15
             velocityX = Math.max(-maxVelocity, Math.min(maxVelocity, velocityX))
             velocityY = Math.max(-maxVelocity, Math.min(maxVelocity, velocityY))
           }
         }
         
-        // Apply calculated velocity to the released circle
         setCircles(prevCircles =>
           prevCircles.map(circle =>
             circle.id === draggedCircle.id
@@ -197,7 +298,7 @@ function App() {
       document.removeEventListener('mousemove', handleMouseMoveGlobal)
       document.removeEventListener('mouseup', handleMouseUpGlobal)
     }
-  }, [draggedCircle, dragOffset])
+  }, [draggedCircle, dragOffset, leftSquareOpen, findConnectedCircles])
 
   const launchCircle = () => {
     if (!address.trim() || !value.trim()) return
@@ -225,7 +326,14 @@ function App() {
       </div>
 
       {/* Left and right squares */}
-      <div className="left-square"></div>
+      <div className={`left-square ${leftSquareOpen ? 'open' : 'closed'}`}>
+        <button 
+          onClick={toggleLeftSquare}
+          className="toggle-button"
+        >
+          {leftSquareOpen ? 'OPEN' : 'CLOSED'}
+        </button>
+      </div>
       <div className="right-square"></div>
 
       {/* Input controls */}
@@ -276,28 +384,32 @@ function App() {
           if (!fromCircle || !toCircle) return null
           
           return (
-            <line
-              key={connection.id}
-              x1={fromCircle.x}
-              y1={fromCircle.y}
-              x2={toCircle.x}
-              y2={toCircle.y}
-              stroke="#fff"
-              strokeWidth="2"
-              markerEnd="url(#arrowhead)"
-            />
+            <g key={connection.id}>
+              {/* Animated connection line */}
+              <line
+                x1={fromCircle.x}
+                y1={fromCircle.y}
+                x2={toCircle.x}
+                y2={toCircle.y}
+                className="animated-line"
+                markerEnd="url(#arrowhead)"
+              />
+            </g>
           )
         })}
         <defs>
           <marker
             id="arrowhead"
-            markerWidth="10"
-            markerHeight="7"
-            refX="9"
-            refY="3.5"
+            markerWidth="8"
+            markerHeight="8"
+            refX="16"
+            refY="4"
             orient="auto"
+            fill="#fff"
+            stroke="#fff"
+            strokeWidth="0.5"
           >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#fff" />
+            <path d="M0,0 L0,8 L8,4 z" fill="#fff" />
           </marker>
         </defs>
       </svg>
