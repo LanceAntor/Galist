@@ -13,6 +13,8 @@ function App() {
   const animationRef = useRef()
   const mouseHistoryRef = useRef([])
   const [leftSquareOpen, setLeftSquareOpen] = useState(false)
+  const [suckingCircles, setSuckingCircles] = useState([])
+  const [suckedCircles, setSuckedCircles] = useState([]) // Track circles that have been sucked out
 
   // Function to find all connected circles recursively
   const findConnectedCircles = useCallback((circleId, visited = new Set()) => {
@@ -37,6 +39,33 @@ function App() {
     setLeftSquareOpen(!leftSquareOpen)
   }
 
+  // Function to start chain suction effect
+  const startChainSuction = useCallback((startCircleId) => {
+    const connectedIds = findConnectedCircles(startCircleId)
+    
+    // Check if this is the head node (has outgoing connections but no incoming)
+    const isHeadNode = connections.some(conn => conn.from === startCircleId) && 
+                      !connections.some(conn => conn.to === startCircleId)
+    
+    // Remove the triggering circle immediately and mark it as sucked
+    setCircles(prevCircles => 
+      prevCircles.filter(c => c.id !== startCircleId)
+    )
+    setSuckedCircles(prev => [...prev, startCircleId])
+    
+    // Start the chain reaction for remaining connected circles
+    const remainingCircles = connectedIds.filter(id => id !== startCircleId)
+    
+    remainingCircles.forEach((circleId, index) => {
+      const delay = isHeadNode ? index * 150 : index * 400 // Faster if head node, slower otherwise
+      
+      setTimeout(() => {
+        // Add circle to sucking list (this will make it get pulled toward entrance)
+        setSuckingCircles(prev => [...prev, circleId])
+      }, delay)
+    })
+  }, [findConnectedCircles, connections])
+
   // Animation loop for floating circles with momentum
   useEffect(() => {
     const animate = () => {
@@ -45,6 +74,52 @@ function App() {
           // Skip physics for dragged circle
           if (draggedCircle && circle.id === draggedCircle.id) {
             return circle
+          }
+
+          // Special behavior for sucking circles
+          if (suckingCircles.includes(circle.id)) {
+            // Target the entrance area of the left square
+            const entranceX = 130 // Right edge of left square
+            const entranceY = window.innerHeight / 2 // Center of entrance vertically
+            const dx = entranceX - circle.x
+            const dy = entranceY - circle.y
+            const distance = Math.sqrt(dx * dx + dy * dy)
+            
+            // Check if circle has reached the entrance area
+            const leftSquareTop = (window.innerHeight / 2) - 50
+            const leftSquareBottom = (window.innerHeight / 2) + 50
+            const entranceTop = leftSquareTop + 10
+            const entranceBottom = leftSquareBottom - 10
+            
+            if (circle.x >= 110 && circle.x <= 135 && 
+                circle.y >= entranceTop && circle.y <= entranceBottom) {
+              // Circle has reached the entrance - remove it and mark as sucked
+              setTimeout(() => {
+                setCircles(prevCircles => 
+                  prevCircles.filter(c => c.id !== circle.id)
+                )
+                
+                // Mark this circle as sucked
+                setSuckedCircles(prev => [...prev, circle.id])
+                
+                setSuckingCircles(prev => prev.filter(id => id !== circle.id))
+              }, 50)
+              
+              return circle
+            }
+            
+            // Strong suction force toward entrance
+            const suctionForce = 1.2
+            const newVelocityX = (dx / distance) * suctionForce
+            const newVelocityY = (dy / distance) * suctionForce
+            
+            return {
+              ...circle,
+              x: circle.x + newVelocityX,
+              y: circle.y + newVelocityY,
+              velocityX: newVelocityX,
+              velocityY: newVelocityY
+            }
           }
 
           let newX = circle.x + circle.velocityX
@@ -90,23 +165,11 @@ function App() {
                 newX - circleRadius <= leftSquareRight && 
                 newX - circleRadius >= leftSquareRight - 20 && 
                 newY >= entranceTop && 
-                newY <= entranceBottom) {
+                newY <= entranceBottom &&
+                !suckingCircles.includes(circle.id)) {
               
-              // Circle entered through entrance - mark for deletion
-              const connectedIds = findConnectedCircles(circle.id)
-              
-              // Remove circles and their connections
-              setTimeout(() => {
-                setCircles(prevCircles => 
-                  prevCircles.filter(c => !connectedIds.includes(c.id))
-                )
-                setConnections(prevConnections => 
-                  prevConnections.filter(connection => 
-                    !connectedIds.includes(connection.from) && 
-                    !connectedIds.includes(connection.to)
-                  )
-                )
-              }, 0)
+              // Start chain suction effect
+              startChainSuction(circle.id)
               
               return circle // Return unchanged for this frame
             } else {
@@ -176,7 +239,26 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [circles.length, draggedCircle, leftSquareOpen, findConnectedCircles])
+  }, [circles.length, draggedCircle, leftSquareOpen, findConnectedCircles, suckingCircles, startChainSuction, suckedCircles])
+
+  // Handle connection removal when circles are sucked
+  useEffect(() => {
+    if (suckedCircles.length > 0) {
+      // Add a delay to allow the visual chain effect to be seen
+      const timer = setTimeout(() => {
+        setConnections(prevConnections => 
+          prevConnections.filter(connection => {
+            const fromSucked = suckedCircles.includes(connection.from)
+            const toSucked = suckedCircles.includes(connection.to)
+            // Only remove connection if BOTH endpoints have been sucked
+            return !(fromSucked && toSucked)
+          })
+        )
+      }, 500) // 500ms delay to allow visual effect
+      
+      return () => clearTimeout(timer)
+    }
+  }, [suckedCircles])
 
   // Mouse event handlers for dragging
   const handleMouseDown = (e, circle) => {
@@ -361,7 +443,7 @@ function App() {
       {circles.map(circle => (
         <div
           key={circle.id}
-          className="animated-circle"
+          className={`animated-circle ${suckingCircles.includes(circle.id) ? 'being-sucked' : ''}`}
           style={{
             left: `${circle.x - 30}px`,
             top: `${circle.y - 30}px`,
@@ -381,16 +463,26 @@ function App() {
           const fromCircle = circles.find(c => c.id === connection.from)
           const toCircle = circles.find(c => c.id === connection.to)
           
-          if (!fromCircle || !toCircle) return null
+          // Skip connection if both circles are missing (shouldn't happen)
+          if (!fromCircle && !toCircle) return null
+          
+          // If one circle is missing (sucked), use the entrance position
+          const entranceX = 130
+          const entranceY = window.innerHeight / 2
+          
+          const fromX = fromCircle ? fromCircle.x : entranceX
+          const fromY = fromCircle ? fromCircle.y : entranceY
+          const toX = toCircle ? toCircle.x : entranceX
+          const toY = toCircle ? toCircle.y : entranceY
           
           return (
             <g key={connection.id}>
               {/* Animated connection line */}
               <line
-                x1={fromCircle.x}
-                y1={fromCircle.y}
-                x2={toCircle.x}
-                y2={toCircle.y}
+                x1={fromX}
+                y1={fromY}
+                x2={toX}
+                y2={toY}
                 className="animated-line"
                 markerEnd="url(#arrowhead)"
               />
