@@ -34,6 +34,20 @@ function App() {
     return connected
   }, [connections])
 
+  // Function to check if a circle is a head node (has outgoing connections but no incoming)
+  const isHeadNode = useCallback((circleId) => {
+    const hasOutgoing = connections.some(conn => conn.from === circleId)
+    const hasIncoming = connections.some(conn => conn.to === circleId)
+    return hasOutgoing && !hasIncoming
+  }, [connections])
+
+  // Function to check if a circle is a tail node (has incoming connections but no outgoing)
+  const isTailNode = useCallback((circleId) => {
+    const hasOutgoing = connections.some(conn => conn.from === circleId)
+    const hasIncoming = connections.some(conn => conn.to === circleId)
+    return hasIncoming && !hasOutgoing
+  }, [connections])
+
   // Toggle left square state
   const toggleLeftSquare = () => {
     setLeftSquareOpen(!leftSquareOpen)
@@ -43,9 +57,8 @@ function App() {
   const startChainSuction = useCallback((startCircleId) => {
     const connectedIds = findConnectedCircles(startCircleId)
     
-    // Check if this is the head node (has outgoing connections but no incoming)
-    const isHeadNode = connections.some(conn => conn.from === startCircleId) && 
-                      !connections.some(conn => conn.to === startCircleId)
+    // Check if this is the head node using the helper function
+    const isHead = isHeadNode(startCircleId)
     
     // Remove the triggering circle immediately and mark it as sucked
     setCircles(prevCircles => 
@@ -57,14 +70,14 @@ function App() {
     const remainingCircles = connectedIds.filter(id => id !== startCircleId)
     
     remainingCircles.forEach((circleId, index) => {
-      const delay = isHeadNode ? index * 150 : index * 400 // Faster if head node, slower otherwise
+      const delay = isHead ? index * 150 : index * 400 // Faster if head node, slower otherwise
       
       setTimeout(() => {
         // Add circle to sucking list (this will make it get pulled toward entrance)
         setSuckingCircles(prev => [...prev, circleId])
       }, delay)
     })
-  }, [findConnectedCircles, connections])
+  }, [findConnectedCircles, isHeadNode])
 
   // Animation loop for floating circles with momentum
   useEffect(() => {
@@ -440,22 +453,32 @@ function App() {
       </div>
 
       {/* Animated circles */}
-      {circles.map(circle => (
-        <div
-          key={circle.id}
-          className={`animated-circle ${suckingCircles.includes(circle.id) ? 'being-sucked' : ''}`}
-          style={{
-            left: `${circle.x - 30}px`,
-            top: `${circle.y - 30}px`,
-            cursor: draggedCircle && circle.id === draggedCircle.id ? 'grabbing' : 'grab'
-          }}
-          onMouseDown={(e) => handleMouseDown(e, circle)}
-          onDoubleClick={() => handleDoubleClick(circle)}
-        >
-          <span className="circle-value">{circle.value}</span>
-          <span className="circle-address">{circle.address}</span>
-        </div>
-      ))}
+      {circles.map(circle => {
+        const isHead = isHeadNode(circle.id)
+        const isTail = isTailNode(circle.id)
+        
+        return (
+          <div
+            key={circle.id}
+            className={`animated-circle ${suckingCircles.includes(circle.id) ? 'being-sucked' : ''}`}
+            style={{
+              left: `${circle.x - 30}px`,
+              top: `${circle.y - 30}px`,
+              cursor: draggedCircle && circle.id === draggedCircle.id ? 'grabbing' : 'grab'
+            }}
+            onMouseDown={(e) => handleMouseDown(e, circle)}
+            onDoubleClick={() => handleDoubleClick(circle)}
+          >
+            {(isHead || isTail) && (
+              <span className="node-type-label">
+                {isHead ? 'Head' : 'Tail'}
+              </span>
+            )}
+            <span className="circle-value">{circle.value}</span>
+            <span className="circle-address">{circle.address}</span>
+          </div>
+        )
+      })}
 
       {/* Connection lines */}
       <svg className="connection-lines">
