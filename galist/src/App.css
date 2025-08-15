@@ -34,6 +34,239 @@
   font-weight: normal;
 }
 
+/* Exercise header styles */
+.exercise-header {
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #00ff00;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+  max-width: 800px;
+}
+
+.exercise-header h1 {
+  color: #00ff00;
+  text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
+  margin-bottom: 10px;
+}
+
+.exercise-header h2 {
+  color: #fff;
+  margin-bottom: 15px;
+}
+
+.exercise-requirements {
+  margin-top: 15px;
+  text-align: left;
+}
+
+.exercise-requirements h3 {
+  color: #ffff00;
+  font-size: 16px;
+  margin-bottom: 10px;
+  text-align: center;
+  text-shadow: 0 0 3px rgba(255, 255, 0, 0.8);
+}
+
+.requirements-list {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  margin-bottom: 15px;
+}
+
+.requirement-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  border: 1px solid #666;
+}
+
+.requirement-item:last-child {
+  margin-bottom: 0;
+}
+
+.value-part {
+  color: #00ffff;
+  margin-right: 10px;
+}
+
+.arrow {
+  color: #fff;
+  margin: 0 8px;
+  font-size: 16px;
+}
+
+.address-part {
+  color: #ff9900;
+  margin-left: 10px;
+}
+
+.empty-list-message {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  width: 100%;
+}
+
+.connection-arrow {
+  color: #00ff00;
+  font-size: 18px;
+  display: block;
+  text-align: center;
+  margin: 5px 0;
+}
+
+.submission-instruction {
+  background-color: rgba(0, 255, 0, 0.1);
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #00ff00;
+  text-align: center;
+}
+
+.submission-instruction p {
+  color: #00ff00;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Instruction button in top left */
+.instruction-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #333;
+  color: white;
+  border: 2px solid #fff;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  font-weight: bold;
+  z-index: 10;
+  transition: background-color 0.3s;
+}
+
+.instruction-button:hover {
+  background-color: #555;
+}
+
+/* Instruction popup styles */
+.instruction-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.instruction-content {
+  background-color: #000;
+  border: 2px solid #fff;
+  border-radius: 15px;
+  padding: 40px;
+  max-width: 500px;
+  text-align: center;
+  color: white;
+}
+
+.instruction-content h1 {
+  font-size: 24px;
+  margin-bottom: 30px;
+  color: #fff;
+  text-decoration: underline;
+}
+
+.instruction-list {
+  margin: 20px 0;
+}
+
+.instruction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 15px 0;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+}
+
+.instruction-value {
+  color: #00ffff;
+  font-weight: bold;
+}
+
+.instruction-arrow {
+  color: #fff;
+  margin: 0 10px;
+}
+
+.instruction-address {
+  color: #ff9900;
+  font-weight: bold;
+}
+
+.start-button {
+  background-color: #333;
+  color: white;
+  border: 2px solid #fff;
+  border-radius: 25px;
+  padding: 12px 30px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background-color 0.3s;
+}
+
+.start-button:hover {
+  background-color: #555;
+}
+
+.simple-header {
+  text-align: center;
+}
+
+.simple-header h1 {
+  font-size: 24px;
+  color: #00ff00;
+  text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
+  margin-bottom: 10px;
+}
+
+.simple-header h2 {
+  font-size: 18px;
+  color: #fff;
+}
+
+.free-mode-header {
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #ff6600;
+  box-shadow: 0 0 15px rgba(255, 102, 0, 0.3);
+}
+
+.free-mode-header h1 {
+  color: #ff6600;
+  text-shadow: 0 0 5px rgba(255, 102, 0, 0.8);
+}
+
 .animated-circle {
   position: absolute;
   width: 60px;
@@ -159,22 +392,21 @@
 
 .right-square {
   position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 130px;
-  height: 100px;
+  bottom: -20px;
+  right: 40px;
+  width: 100px;
+  height: 80px;
   background-color: #666;
   z-index: 10;
 }
 
 .controls {
   position: absolute;
-  bottom: 40px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 20px;
+  gap: 50px;
   z-index: 10;
 }
 
@@ -318,4 +550,257 @@
 
 .popup-button:hover {
   background-color: #bbb;
+}
+
+/* Exercise Mode Styles */
+.exercise-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 5px;
+}
+
+.mode-toggle button {
+  padding: 8px 16px;
+  border: 2px solid #555;
+  background-color: #333;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.mode-toggle button.active {
+  background-color: #007acc;
+  border-color: #007acc;
+}
+
+.mode-toggle button:hover {
+  background-color: #555;
+}
+
+.mode-toggle button.active:hover {
+  background-color: #0066aa;
+}
+
+.exercise-selector {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.exercise-selector select {
+  padding: 6px 10px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.reset-button {
+  padding: 6px 12px;
+  border: 1px solid #555;
+  background-color: #666;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.reset-button:hover {
+  background-color: #777;
+}
+
+.exercise-instructions {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  max-width: 400px;
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  z-index: 10;
+}
+
+.exercise-instructions h3 {
+  margin-bottom: 8px;
+  color: #ffd700;
+  font-size: 16px;
+}
+
+.exercise-instructions p {
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.expected-structure {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.expected-structure strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #ffd700;
+  font-size: 13px;
+}
+
+.structure-visual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.structure-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: rgba(211, 211, 211, 0.2);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.structure-address {
+  font-size: 10px;
+  color: #ccc;
+  margin-top: 2px;
+}
+
+.submission-hint {
+  margin-top: 12px;
+  padding: 8px;
+  background-color: rgba(0, 122, 204, 0.2);
+  border-left: 3px solid #007acc;
+  font-size: 13px;
+  color: #add8e6;
+}
+
+/* Validation Overlay */
+.validation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+}
+
+.validation-content {
+  background-color: #222;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  border: 2px solid #444;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.validation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #555;
+}
+
+.validation-header h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.validation-header.correct h2 {
+  color: #4caf50;
+}
+
+.validation-header.incorrect h2 {
+  color: #f44336;
+}
+
+.score {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.validation-message {
+  font-size: 16px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.validation-details {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #ddd;
+}
+
+.validation-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.close-validation, .try-again {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.close-validation {
+  background-color: #666;
+  color: white;
+}
+
+.close-validation:hover {
+  background-color: #777;
+}
+
+.try-again {
+  background-color: #007acc;
+  color: white;
+}
+
+.try-again:hover {
+  background-color: #0066aa;
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
+import { ExerciseManager, EXERCISE_TEMPLATES } from './LinkedListExercise'
 
 function App() {
   const [address, setAddress] = useState('')
@@ -15,6 +16,19 @@ function App() {
   const [leftSquareOpen, setLeftSquareOpen] = useState(false)
   const [suckingCircles, setSuckingCircles] = useState([])
   const [suckedCircles, setSuckedCircles] = useState([]) // Track circles that have been sucked out
+
+  // Exercise system states
+  const exerciseManagerRef = useRef(new ExerciseManager())
+  const [currentExercise, setCurrentExercise] = useState(null)
+  const [showValidationResult, setShowValidationResult] = useState(false)
+  const [validationResult, setValidationResult] = useState(null)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [showInstructionPopup, setShowInstructionPopup] = useState(false)
+
+  // Function to toggle instruction popup
+  const toggleInstructionPopup = () => {
+    setShowInstructionPopup(!showInstructionPopup)
+  }
 
   // Function to find all connected circles recursively
   const findConnectedCircles = useCallback((circleId, visited = new Set()) => {
@@ -50,8 +64,86 @@ function App() {
 
   // Toggle left square state
   const toggleLeftSquare = () => {
+    if (!isSubmitted && circles.length > 0) {
+      // Opening the suction submits the answer
+      submitExerciseAnswer()
+    }
     setLeftSquareOpen(!leftSquareOpen)
   }
+
+  // Exercise management functions
+  const resetWorkspace = useCallback(() => {
+    setCircles([])
+    setConnections([])
+    setSuckingCircles([])
+    setSuckedCircles([])
+    setLeftSquareOpen(false)
+    setShowValidationResult(false)
+    setValidationResult(null)
+    setIsSubmitted(false)
+    exerciseManagerRef.current.reset()
+  }, [])
+
+  const submitExerciseAnswer = useCallback(() => {
+    if (!currentExercise || circles.length === 0) return
+    
+    try {
+      exerciseManagerRef.current.submitAnswer(circles, connections)
+      setIsSubmitted(true)
+    } catch (error) {
+      console.error('Error submitting answer:', error)
+    }
+  }, [currentExercise, circles, connections])
+
+  const loadExercise = useCallback(() => {
+    const exercise = exerciseManagerRef.current.loadExercise('basic')
+    setCurrentExercise(exercise)
+    resetWorkspace()
+  }, [resetWorkspace])
+
+  const startExercise = useCallback(() => {
+    setShowInstructionPopup(false)
+    if (!currentExercise) {
+      loadExercise()
+    }
+  }, [loadExercise, currentExercise])
+
+  // Initialize exercise on component mount
+  useEffect(() => {
+    if (!currentExercise) {
+      const exercise = exerciseManagerRef.current.loadExercise('basic')
+      setCurrentExercise(exercise)
+    }
+  }, [currentExercise])
+
+  // Initialize with basic exercise when instruction popup is closed
+  useEffect(() => {
+    if (!showInstructionPopup && !currentExercise) {
+      loadExercise()
+    }
+  }, [showInstructionPopup, currentExercise, loadExercise])
+
+  // Check when all circles are gone and validate
+  useEffect(() => {
+    if (isSubmitted && circles.length === 0 && suckedCircles.length > 0) {
+      // All circles have been sucked - validate the submission
+      setTimeout(() => {
+        try {
+          const result = exerciseManagerRef.current.validateSubmission()
+          setValidationResult(result)
+          setShowValidationResult(true)
+        } catch (error) {
+          setValidationResult({
+            isCorrect: false,
+            message: 'Validation Error',
+            details: error.message,
+            score: 0
+          })
+          setShowValidationResult(true)
+        }
+      }, 1500) // Wait 1.5 seconds after all circles are gone
+    }
+  }, [isSubmitted, circles.length, suckedCircles.length])
 
   // Function to start chain suction effect
   const startChainSuction = useCallback((startCircleId) => {
@@ -160,11 +252,11 @@ function App() {
           newX = circle.x + newVelocityX
           newY = circle.y + newVelocityY
 
-          // Right square collision detection (make it a solid block)
-          const rightSquareLeft = window.innerWidth - 130
-          const rightSquareRight = window.innerWidth
-          const rightSquareTop = (window.innerHeight / 2) - 50
-          const rightSquareBottom = (window.innerHeight / 2) + 50
+          // Right square collision detection (make it a solid block) - positioned with bottom: -20px, right: 40px
+          const rightSquareLeft = window.innerWidth - 140 // 40px from right + 100px width
+          const rightSquareRight = window.innerWidth - 40 // 40px from right edge
+          const rightSquareTop = window.innerHeight + 20 - 80 // bottom: -20px means 20px below screen, then subtract height (80px)
+          const rightSquareBottom = window.innerHeight + 20 // bottom: -20px means the bottom edge is 20px below screen
           const circleRadius = 30
 
           // Check collision with right square
@@ -179,17 +271,20 @@ function App() {
               newVelocityX = -Math.abs(newVelocityX) * 0.8
               newX = rightSquareLeft - circleRadius
             }
-            if (newY - circleRadius <= rightSquareBottom && newY + circleRadius >= rightSquareTop) {
-              // Hit top or bottom wall of right square
-              if (newY < rightSquareTop + 50) {
-                // Hit top wall
-                newVelocityY = -Math.abs(newVelocityY) * 0.8
-                newY = rightSquareTop - circleRadius
-              } else {
-                // Hit bottom wall
-                newVelocityY = Math.abs(newVelocityY) * 0.8
-                newY = rightSquareBottom + circleRadius
-              }
+            if (newX - circleRadius <= rightSquareRight && circle.x - circleRadius > rightSquareRight) {
+              // Hit right wall of right square
+              newVelocityX = Math.abs(newVelocityX) * 0.8
+              newX = rightSquareRight + circleRadius
+            }
+            if (newY + circleRadius >= rightSquareTop && circle.y + circleRadius < rightSquareTop) {
+              // Hit top wall of right square
+              newVelocityY = -Math.abs(newVelocityY) * 0.8
+              newY = rightSquareTop - circleRadius
+            }
+            if (newY - circleRadius <= rightSquareBottom && circle.y - circleRadius > rightSquareBottom) {
+              // Hit bottom wall of right square
+              newVelocityY = Math.abs(newVelocityY) * 0.8
+              newY = rightSquareBottom + circleRadius
             }
           }
 
@@ -386,6 +481,9 @@ function App() {
           })
         }
       }
+    } else if (!leftSquareOpen) {
+      // Clear sucking circles when suction box is closed
+      setSuckingCircles([])
     }
   }, [leftSquareOpen, circles, connections, isHeadNode])
 
@@ -518,10 +616,10 @@ function App() {
       id: Date.now(),
       address: address.trim(),
       value: value.trim(),
-      x: window.innerWidth - 100, // Start from right square position
-      y: window.innerHeight / 2,
-      velocityX: -3 - Math.random() * 2, // Random velocity to the left
-      velocityY: (Math.random() - 0.5) * 4 // Random vertical velocity (up or down)
+      x: window.innerWidth - 90, // Center of right square horizontally (40px from right + 50px to center of 100px width)
+      y: window.innerHeight - 20, // Center of right square vertically (bottom: -20px + 40px to center of 80px height)
+      velocityX: (Math.random() - 0.5) * 2, // Small random horizontal velocity
+      velocityY: -5 - Math.random() * 3 // Launch upward with random velocity
     }
 
     setCircles(prev => [...prev, newCircle])
@@ -531,10 +629,33 @@ function App() {
 
   return (
     <div className="app">
-      <div className="header">
-        <h1>CREATE A LINKED LIST THAT CONSISTS: [10, 20, 50, 30].</h1>
-        <h2>ADDRESS OF EACH NODE: 10 → a10, 20 → a30, 50 → a50, 30 → a70</h2>
-      </div>
+      {/* Instruction button in top left */}
+      <button className="instruction-button" onClick={toggleInstructionPopup}>
+        i
+      </button>
+
+      {/* Instruction popup */}
+      {showInstructionPopup && currentExercise && currentExercise.expectedStructure && (
+        <div className="instruction-popup">
+          <div className="instruction-content">
+            <h1>{currentExercise.title}</h1>
+            <div className="instruction-list">
+              {currentExercise.expectedStructure.map((node, index) => (
+                <div key={index} className="instruction-item">
+                  <span className="instruction-value">Value: {node.value}</span>
+                  <span className="instruction-arrow">→</span>
+                  <span className="instruction-address">Address: {node.address}</span>
+                </div>
+              ))}
+            </div>
+            <button className="start-button" onClick={startExercise}>
+              Start
+            </button>
+          </div>
+        </div>
+      )}
+
+      
 
       {/* Left and right squares */}
       <div className={`left-square ${leftSquareOpen ? 'open' : 'closed'}`}>
@@ -644,6 +765,40 @@ function App() {
           </marker>
         </defs>
       </svg>
+
+      {/* Validation Result Overlay */}
+      {showValidationResult && validationResult && (
+        <div className="validation-overlay">
+          <div className="validation-content">
+            <div className={`validation-header ${validationResult.isCorrect ? 'correct' : 'incorrect'}`}>
+              <h2>{validationResult.isCorrect ? '✓ Correct!' : '✗ Incorrect'}</h2>
+              <div className="score">Score: {validationResult.score}%</div>
+            </div>
+            <div className="validation-message">
+              {validationResult.message}
+            </div>
+            {validationResult.details && (
+              <div className="validation-details">
+                {validationResult.details}
+              </div>
+            )}
+            <div className="validation-buttons">
+              <button 
+                onClick={() => setShowValidationResult(false)}
+                className="close-validation"
+              >
+                Close
+              </button>
+              <button 
+                onClick={resetWorkspace}
+                className="try-again"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Connection popup */}
       {selectedCircle && (
