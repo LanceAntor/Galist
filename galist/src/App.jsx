@@ -70,7 +70,7 @@ function App() {
     const remainingCircles = connectedIds.filter(id => id !== startCircleId)
     
     remainingCircles.forEach((circleId, index) => {
-      const delay = isHead ? index * 150 : index * 400 // Faster if head node, slower otherwise
+      const delay = isHead ? index * 50 : index * 400 // Much faster if head node (50ms vs 150ms)
       
       setTimeout(() => {
         // Add circle to sucking list (this will make it get pulled toward entrance)
@@ -121,8 +121,10 @@ function App() {
               return circle
             }
             
-            // Strong suction force toward entrance
-            const suctionForce = 1.2
+            // Strong suction force toward entrance - boost if triggered by head node
+            const baseForce = 2.0
+            const headBoost = 1.5 // Extra boost when head node triggered the chain
+            const suctionForce = baseForce + headBoost
             const newVelocityX = (dx / distance) * suctionForce
             const newVelocityY = (dy / distance) * suctionForce
             
@@ -181,8 +183,14 @@ function App() {
                 newY <= entranceBottom &&
                 !suckingCircles.includes(circle.id)) {
               
-              // Start chain suction effect
-              startChainSuction(circle.id)
+              // Only allow head nodes to trigger chain suction, or any node if no head exists
+              const isHead = isHeadNode(circle.id)
+              const hasAnyHeadNode = circles.some(c => isHeadNode(c.id))
+              
+              if (isHead || !hasAnyHeadNode) {
+                // Start chain suction effect
+                startChainSuction(circle.id)
+              }
               
               return circle // Return unchanged for this frame
             } else {
@@ -252,7 +260,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [circles.length, draggedCircle, leftSquareOpen, findConnectedCircles, suckingCircles, startChainSuction, suckedCircles])
+  }, [circles, draggedCircle, leftSquareOpen, findConnectedCircles, suckingCircles, startChainSuction, suckedCircles, isHeadNode])
 
   // Handle connection removal when circles are sucked
   useEffect(() => {
@@ -272,6 +280,47 @@ function App() {
       return () => clearTimeout(timer)
     }
   }, [suckedCircles])
+
+  // Auto-suction effect when left square opens - prioritize head nodes
+  useEffect(() => {
+    if (leftSquareOpen && circles.length > 0) {
+      // Find all head nodes
+      const headNodes = circles.filter(circle => isHeadNode(circle.id))
+      
+      if (headNodes.length > 0) {
+        // Start pulling head nodes toward entrance (not instant suction)
+        headNodes.forEach((headNode, index) => {
+          setTimeout(() => {
+            setSuckingCircles(prev => {
+              if (!prev.includes(headNode.id)) {
+                return [...prev, headNode.id]
+              }
+              return prev
+            })
+          }, index * 200) // 200ms delay between head nodes if multiple exist
+        })
+      } else {
+        // If no head nodes exist, find isolated nodes (no connections)
+        const isolatedNodes = circles.filter(circle => 
+          !connections.some(conn => conn.from === circle.id || conn.to === circle.id)
+        )
+        
+        if (isolatedNodes.length > 0) {
+          // Start pulling isolated nodes toward entrance
+          isolatedNodes.forEach((node, index) => {
+            setTimeout(() => {
+              setSuckingCircles(prev => {
+                if (!prev.includes(node.id)) {
+                  return [...prev, node.id]
+                }
+                return prev
+              })
+            }, index * 200)
+          })
+        }
+      }
+    }
+  }, [leftSquareOpen, circles, connections, isHeadNode])
 
   // Mouse event handlers for dragging
   const handleMouseDown = (e, circle) => {
