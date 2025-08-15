@@ -160,6 +160,39 @@ function App() {
           newX = circle.x + newVelocityX
           newY = circle.y + newVelocityY
 
+          // Right square collision detection (make it a solid block)
+          const rightSquareLeft = window.innerWidth - 130
+          const rightSquareRight = window.innerWidth
+          const rightSquareTop = (window.innerHeight / 2) - 50
+          const rightSquareBottom = (window.innerHeight / 2) + 50
+          const circleRadius = 30
+
+          // Check collision with right square
+          if (newX + circleRadius >= rightSquareLeft && 
+              newX - circleRadius <= rightSquareRight && 
+              newY - circleRadius <= rightSquareBottom && 
+              newY + circleRadius >= rightSquareTop) {
+            
+            // Bounce off the walls of the right square
+            if (newX + circleRadius >= rightSquareLeft && circle.x + circleRadius < rightSquareLeft) {
+              // Hit left wall of right square
+              newVelocityX = -Math.abs(newVelocityX) * 0.8
+              newX = rightSquareLeft - circleRadius
+            }
+            if (newY - circleRadius <= rightSquareBottom && newY + circleRadius >= rightSquareTop) {
+              // Hit top or bottom wall of right square
+              if (newY < rightSquareTop + 50) {
+                // Hit top wall
+                newVelocityY = -Math.abs(newVelocityY) * 0.8
+                newY = rightSquareTop - circleRadius
+              } else {
+                // Hit bottom wall
+                newVelocityY = Math.abs(newVelocityY) * 0.8
+                newY = rightSquareBottom + circleRadius
+              }
+            }
+          }
+
           // Check collision with left square (suction box)
           const leftSquareLeft = 0
           const leftSquareRight = 130
@@ -167,7 +200,6 @@ function App() {
           const leftSquareBottom = (window.innerHeight / 2) + 50
           const entranceTop = leftSquareTop + 10  // x2 position (10px from top)
           const entranceBottom = leftSquareBottom - 10  // y2 position (10px from bottom)
-          const circleRadius = 30
 
           // Check if circle is colliding with left square
           if (newX - circleRadius <= leftSquareRight && 
@@ -214,6 +246,41 @@ function App() {
               }
             }
           }
+
+          // Circle-to-circle collision detection
+          prevCircles.forEach(otherCircle => {
+            if (otherCircle.id !== circle.id && !suckingCircles.includes(otherCircle.id)) {
+              const dx = newX - otherCircle.x
+              const dy = newY - otherCircle.y
+              const distance = Math.sqrt(dx * dx + dy * dy)
+              const minDistance = circleRadius * 2 // Two circle radii
+              
+              if (distance < minDistance && distance > 0) {
+                // Circles are colliding - calculate collision response
+                const overlap = minDistance - distance
+                const separationX = (dx / distance) * (overlap / 2)
+                const separationY = (dy / distance) * (overlap / 2)
+                
+                // Separate the circles
+                newX += separationX
+                newY += separationY
+                
+                // Calculate collision velocities (elastic collision)
+                const relativeVelocityX = newVelocityX - otherCircle.velocityX
+                const relativeVelocityY = newVelocityY - otherCircle.velocityY
+                const velocityAlongCollision = (relativeVelocityX * dx + relativeVelocityY * dy) / distance
+                
+                if (velocityAlongCollision > 0) return // Objects are separating
+                
+                // Apply collision response with energy loss
+                const restitution = 0.8 // Energy retention (0.8 = 80% energy kept)
+                const collisionForce = velocityAlongCollision * restitution
+                
+                newVelocityX -= collisionForce * (dx / distance)
+                newVelocityY -= collisionForce * (dy / distance)
+              }
+            }
+          })
 
           // Apply air resistance to gradually slow down movement
           newVelocityX *= 0.998
