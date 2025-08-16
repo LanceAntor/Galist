@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import { ExerciseManager, EXERCISE_TEMPLATES } from './LinkedListExercise'
+import { collisionDetection } from './CollisionDetection'
 
 function App() {
   const [address, setAddress] = useState('')
@@ -229,11 +230,6 @@ function App() {
             }
           }
 
-          let newX = circle.x + circle.velocityX
-          let newY = circle.y + circle.velocityY
-          let newVelocityX = circle.velocityX
-          let newVelocityY = circle.velocityY
-
           // Add suction effect when left square is open
           if (leftSquareOpen) {
             const leftSquareCenter = { x: 65, y: window.innerHeight / 2 }
@@ -243,213 +239,45 @@ function App() {
             
             if (distance > 80) { // Only apply suction if not too close
               const suctionForce = 0.1
-              newVelocityX += (dx / distance) * suctionForce
-              newVelocityY += (dy / distance) * suctionForce
+              // Apply suction to the circle's velocity
+              circle.velocityX = (circle.velocityX || 0) + (dx / distance) * suctionForce
+              circle.velocityY = (circle.velocityY || 0) + (dy / distance) * suctionForce
             }
           }
 
-          // Update positions with velocities
-          newX = circle.x + newVelocityX
-          newY = circle.y + newVelocityY
+          // Handle special left square suction logic first
+          if (leftSquareOpen) {
+            const leftSquareRight = 130
+            const leftSquareTop = (window.innerHeight / 2) - 50
+            const leftSquareBottom = (window.innerHeight / 2) + 50
+            const entranceTop = leftSquareTop + 10
+            const entranceBottom = leftSquareBottom - 10
+            const circleRadius = 30
 
-          // Right square collision detection (make it a solid block) - positioned with bottom: 10px, right: -40px, rotated -40deg
-          // Using the same coordinates as the debug visualization
-          const rightSquareLeft = window.innerWidth + 15 - 95 // matches debug left position
-          const rightSquareRight = rightSquareLeft + 100      // add width (100px)
-          const rightSquareTop = window.innerHeight - 55      // matches debug top position
-          const rightSquareBottom = rightSquareTop + 90       // add height (90px)
-          const circleRadius = 30
+            const newX = circle.x + (circle.velocityX || 0)
+            const newY = circle.y + (circle.velocityY || 0)
 
-          // Check collision with right square
-          if (newX + circleRadius >= rightSquareLeft && 
-              newX - circleRadius <= rightSquareRight && 
-              newY - circleRadius <= rightSquareBottom && 
-              newY + circleRadius >= rightSquareTop) {
-            
-            // Bounce off the walls of the right square
-            if (newX + circleRadius >= rightSquareLeft && circle.x + circleRadius < rightSquareLeft) {
-              // Hit left wall of right square
-              newVelocityX = -Math.abs(newVelocityX) * 0.8
-              newX = rightSquareLeft - circleRadius
-            }
-            if (newX - circleRadius <= rightSquareRight && circle.x - circleRadius > rightSquareRight) {
-              // Hit right wall of right square
-              newVelocityX = Math.abs(newVelocityX) * 0.8
-              newX = rightSquareRight + circleRadius
-            }
-            if (newY + circleRadius >= rightSquareTop && circle.y + circleRadius < rightSquareTop) {
-              // Hit top wall of right square
-              newVelocityY = -Math.abs(newVelocityY) * 0.8
-              newY = rightSquareTop - circleRadius
-            }
-            if (newY - circleRadius <= rightSquareBottom && circle.y - circleRadius > rightSquareBottom) {
-              // Hit bottom wall of right square
-              newVelocityY = Math.abs(newVelocityY) * 0.8
-              newY = rightSquareBottom + circleRadius
-            }
-          }
-
-          // Check collision with left square (suction box)
-          const leftSquareLeft = 0
-          const leftSquareRight = 130
-          const leftSquareTop = (window.innerHeight / 2) - 50
-          const leftSquareBottom = (window.innerHeight / 2) + 50
-          const entranceTop = leftSquareTop + 10  // x2 position (10px from top)
-          const entranceBottom = leftSquareBottom - 10  // y2 position (10px from bottom)
-
-          // Check if circle is colliding with left square
-          if (newX - circleRadius <= leftSquareRight && 
-              newX + circleRadius >= leftSquareLeft && 
-              newY - circleRadius <= leftSquareBottom && 
-              newY + circleRadius >= leftSquareTop) {
-            
-            // Check if circle is entering through the entrance (right side between x2 and y2)
-            if (leftSquareOpen && 
-                newX - circleRadius <= leftSquareRight && 
+            // Check if circle is entering through the entrance
+            if (newX - circleRadius <= leftSquareRight && 
                 newX - circleRadius >= leftSquareRight - 20 && 
                 newY >= entranceTop && 
                 newY <= entranceBottom &&
                 !suckingCircles.includes(circle.id)) {
               
-              // Only allow head nodes to trigger chain suction, or any node if no head exists
               const isHead = isHeadNode(circle.id)
               const hasAnyHeadNode = circles.some(c => isHeadNode(c.id))
               
               if (isHead || !hasAnyHeadNode) {
-                // Start chain suction effect
                 startChainSuction(circle.id)
               }
               
               return circle // Return unchanged for this frame
-            } else {
-              // Bounce off the walls of the left square
-              if (newX - circleRadius <= leftSquareRight && circle.x - circleRadius > leftSquareRight) {
-                // Hit right wall
-                newVelocityX = Math.abs(newVelocityX) * 0.8
-                newX = leftSquareRight + circleRadius
-              }
-              if (newY - circleRadius <= leftSquareBottom && newY + circleRadius >= leftSquareTop) {
-                // Hit top or bottom wall
-                if (newY < leftSquareTop + 50) {
-                  // Hit top wall
-                  newVelocityY = -Math.abs(newVelocityY) * 0.8
-                  newY = leftSquareTop - circleRadius
-                } else {
-                  // Hit bottom wall
-                  newVelocityY = Math.abs(newVelocityY) * 0.8
-                  newY = leftSquareBottom + circleRadius
-                }
-              }
             }
           }
 
-          // Controls area collision detection
-          const controlsHeight = 60 // Height based on input field padding + font size
-          const controlsWidth = 1060 // Width: 2 input fields (320px each) + button (320px) + gaps (50px each) + margins
-          const controlsLeft = window.innerWidth * 0.39 - controlsWidth / 2 // left: 39% with centering
-          const controlsRight = controlsLeft + controlsWidth
-          const controlsTop = window.innerHeight - 10 - controlsHeight // bottom: 10px
-          const controlsBottom = window.innerHeight - 10
-
-          // Check collision with controls area
-          if (newX + circleRadius >= controlsLeft && 
-              newX - circleRadius <= controlsRight && 
-              newY + circleRadius >= controlsTop && 
-              newY - circleRadius <= controlsBottom) {
-            
-            // Determine which side was hit and bounce accordingly
-            const distanceToLeft = Math.abs((newX + circleRadius) - controlsLeft)
-            const distanceToRight = Math.abs((newX - circleRadius) - controlsRight)
-            const distanceToTop = Math.abs((newY + circleRadius) - controlsTop)
-            const distanceToBottom = Math.abs((newY - circleRadius) - controlsBottom)
-            
-            const minDistance = Math.min(distanceToLeft, distanceToRight, distanceToTop, distanceToBottom)
-            
-            if (minDistance === distanceToLeft && newVelocityX > 0) {
-              // Hit left wall
-              newVelocityX = -Math.abs(newVelocityX) * 0.8
-              newX = controlsLeft - circleRadius
-            } else if (minDistance === distanceToRight && newVelocityX < 0) {
-              // Hit right wall
-              newVelocityX = Math.abs(newVelocityX) * 0.8
-              newX = controlsRight + circleRadius
-            } else if (minDistance === distanceToTop && newVelocityY > 0) {
-              // Hit top wall (most common - circles coming from above)
-              newVelocityY = -Math.abs(newVelocityY) * 0.8
-              newY = controlsTop - circleRadius
-            } else if (minDistance === distanceToBottom && newVelocityY < 0) {
-              // Hit bottom wall
-              newVelocityY = Math.abs(newVelocityY) * 0.8
-              newY = controlsBottom + circleRadius
-            }
-          }
-
-          // Circle-to-circle collision detection
-          prevCircles.forEach(otherCircle => {
-            if (otherCircle.id !== circle.id && !suckingCircles.includes(otherCircle.id)) {
-              const dx = newX - otherCircle.x
-              const dy = newY - otherCircle.y
-              const distance = Math.sqrt(dx * dx + dy * dy)
-              const minDistance = circleRadius * 2 // Two circle radii
-              
-              if (distance < minDistance && distance > 0) {
-                // Circles are colliding - calculate collision response
-                const overlap = minDistance - distance
-                const separationX = (dx / distance) * (overlap / 2)
-                const separationY = (dy / distance) * (overlap / 2)
-                
-                // Separate the circles
-                newX += separationX
-                newY += separationY
-                
-                // Calculate collision velocities (elastic collision)
-                const relativeVelocityX = newVelocityX - otherCircle.velocityX
-                const relativeVelocityY = newVelocityY - otherCircle.velocityY
-                const velocityAlongCollision = (relativeVelocityX * dx + relativeVelocityY * dy) / distance
-                
-                if (velocityAlongCollision > 0) return // Objects are separating
-                
-                // Apply collision response with energy loss
-                const restitution = 0.8 // Energy retention (0.8 = 80% energy kept)
-                const collisionForce = velocityAlongCollision * restitution
-                
-                newVelocityX -= collisionForce * (dx / distance)
-                newVelocityY -= collisionForce * (dy / distance)
-              }
-            }
-          })
-
-          // Apply air resistance to gradually slow down movement
-          newVelocityX *= 0.998
-          newVelocityY *= 0.998
-
-          // Bounce off walls (accounting for circle radius)
-          if (newX <= 30 || newX >= window.innerWidth - 30) {
-            newVelocityX = -newVelocityX * 0.8 // Energy loss on bounce
-            newX = newX <= 30 ? 30 : window.innerWidth - 30
-          }
-          
-          // Bounce off top and bottom
-          if (newY <= 30 || newY >= window.innerHeight - 30) {
-            newVelocityY = -newVelocityY * 0.8 // Energy loss on bounce
-            newY = newY <= 30 ? 30 : window.innerHeight - 30
-          }
-
-          // Stop movement if velocity is very low
-          if (Math.abs(newVelocityX) < 0.1) {
-            newVelocityX = 0
-          }
-          if (Math.abs(newVelocityY) < 0.1) {
-            newVelocityY = 0
-          }
-
-          return {
-            ...circle,
-            x: newX,
-            y: newY,
-            velocityX: newVelocityX,
-            velocityY: newVelocityY
-          }
+          // Apply collision detection and physics
+          const updatedCircles = collisionDetection.updatePhysics([circle], connections, suckingCircles)
+          return updatedCircles[0] || circle
         })
       )
       animationRef.current = requestAnimationFrame(animate)
@@ -464,7 +292,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [circles, draggedCircle, leftSquareOpen, findConnectedCircles, suckingCircles, startChainSuction, suckedCircles, isHeadNode])
+  }, [circles, draggedCircle, leftSquareOpen, findConnectedCircles, suckingCircles, startChainSuction, suckedCircles, isHeadNode, connections])
 
   // Handle connection removal when circles are sucked
   useEffect(() => {
