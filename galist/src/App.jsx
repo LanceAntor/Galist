@@ -343,6 +343,47 @@ function App() {
             }
           }
 
+          // Controls area collision detection
+          const controlsHeight = 60 // Height based on input field padding + font size
+          const controlsWidth = 1060 // Width: 2 input fields (320px each) + button (320px) + gaps (50px each) + margins
+          const controlsLeft = window.innerWidth * 0.39 - controlsWidth / 2 // left: 39% with centering
+          const controlsRight = controlsLeft + controlsWidth
+          const controlsTop = window.innerHeight - 10 - controlsHeight // bottom: 10px
+          const controlsBottom = window.innerHeight - 10
+
+          // Check collision with controls area
+          if (newX + circleRadius >= controlsLeft && 
+              newX - circleRadius <= controlsRight && 
+              newY + circleRadius >= controlsTop && 
+              newY - circleRadius <= controlsBottom) {
+            
+            // Determine which side was hit and bounce accordingly
+            const distanceToLeft = Math.abs((newX + circleRadius) - controlsLeft)
+            const distanceToRight = Math.abs((newX - circleRadius) - controlsRight)
+            const distanceToTop = Math.abs((newY + circleRadius) - controlsTop)
+            const distanceToBottom = Math.abs((newY - circleRadius) - controlsBottom)
+            
+            const minDistance = Math.min(distanceToLeft, distanceToRight, distanceToTop, distanceToBottom)
+            
+            if (minDistance === distanceToLeft && newVelocityX > 0) {
+              // Hit left wall
+              newVelocityX = -Math.abs(newVelocityX) * 0.8
+              newX = controlsLeft - circleRadius
+            } else if (minDistance === distanceToRight && newVelocityX < 0) {
+              // Hit right wall
+              newVelocityX = Math.abs(newVelocityX) * 0.8
+              newX = controlsRight + circleRadius
+            } else if (minDistance === distanceToTop && newVelocityY > 0) {
+              // Hit top wall (most common - circles coming from above)
+              newVelocityY = -Math.abs(newVelocityY) * 0.8
+              newY = controlsTop - circleRadius
+            } else if (minDistance === distanceToBottom && newVelocityY < 0) {
+              // Hit bottom wall
+              newVelocityY = Math.abs(newVelocityY) * 0.8
+              newY = controlsBottom + circleRadius
+            }
+          }
+
           // Circle-to-circle collision detection
           prevCircles.forEach(otherCircle => {
             if (otherCircle.id !== circle.id && !suckingCircles.includes(otherCircle.id)) {
@@ -696,7 +737,7 @@ function App() {
         width: `100px`, // square width
         height: `90px`, // square height
         border: '2px solid cyan',
-        transform: 'rotate(-40deg)',
+        transform: 'rotate(-40deg)'
         background: 'rgba(0, 255, 255, 0.1)',
         pointerEvents: 'none',
         zIndex: 15
