@@ -252,11 +252,12 @@ function App() {
           newX = circle.x + newVelocityX
           newY = circle.y + newVelocityY
 
-          // Right square collision detection (make it a solid block) - positioned with bottom: -20px, right: 40px
-          const rightSquareLeft = window.innerWidth - 140 // 40px from right + 100px width
-          const rightSquareRight = window.innerWidth - 40 // 40px from right edge
-          const rightSquareTop = window.innerHeight + 20 - 80 // bottom: -20px means 20px below screen, then subtract height (80px)
-          const rightSquareBottom = window.innerHeight + 20 // bottom: -20px means the bottom edge is 20px below screen
+          // Right square collision detection (make it a solid block) - positioned with bottom: 10px, right: -40px, rotated -40deg
+          // Using the same coordinates as the debug visualization
+          const rightSquareLeft = window.innerWidth + 15 - 95 // matches debug left position
+          const rightSquareRight = rightSquareLeft + 100      // add width (100px)
+          const rightSquareTop = window.innerHeight - 55      // matches debug top position
+          const rightSquareBottom = rightSquareTop + 90       // add height (90px)
           const circleRadius = 30
 
           // Check collision with right square
@@ -616,9 +617,9 @@ function App() {
       id: Date.now(),
       address: address.trim(),
       value: value.trim(),
-      x: window.innerWidth - 90, // Center of right square horizontally (40px from right + 50px to center of 100px width)
-      y: window.innerHeight - 20, // Center of right square vertically (bottom: -20px + 40px to center of 80px height)
-      velocityX: (Math.random() - 0.5) * 2, // Small random horizontal velocity
+      x: window.innerWidth - 10, // Right edge of right square (right: -40px means 40px beyond right edge, center would be -40 + 50)
+      y: window.innerHeight - 55, // Center of right square vertically (bottom: 10px + 45px to center of 90px height)
+      velocityX: -8 - Math.random() * 5, // Launch leftward with random velocity (since square is angled)
       velocityY: -5 - Math.random() * 3 // Launch upward with random velocity
     }
 
@@ -629,6 +630,22 @@ function App() {
 
   return (
     <div className="app">
+      {/* Video background */}
+      <video 
+        className="video-background"
+        autoPlay 
+        loop 
+        muted 
+        playsInline
+        preload="auto"
+        onError={(e) => console.error('Video error:', e)}
+        onLoadedData={() => console.log('Video loaded successfully')}
+      >
+        <source src="/video/selection_bg.mp4" type="video/mp4" />
+        <source src="./video/selection_bg.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+
       {/* Instruction button in top left */}
       <button className="instruction-button" onClick={toggleInstructionPopup}>
         i
@@ -666,7 +683,24 @@ function App() {
           {leftSquareOpen ? 'OPEN' : 'CLOSED'}
         </button>
       </div>
-      <div className="right-square"></div>
+      <div className="right-square" style={{
+        
+        outlineOffset: '5px'
+      }}></div>
+
+      {/* DEBUG: Collision detection boundaries
+      <div style={{
+        position: 'absolute',
+        left: `${window.innerWidth + 15 - 95}px`, // rightSquareLeft
+        top: `${window.innerHeight - 55}px`,  // rightSquareTop
+        width: `100px`, // square width
+        height: `90px`, // square height
+        border: '2px solid cyan',
+        transform: 'rotate(-40deg)',
+        background: 'rgba(0, 255, 255, 0.1)',
+        pointerEvents: 'none',
+        zIndex: 15
+      }}></div> */}
 
       {/* Input controls */}
       <div className="controls">
