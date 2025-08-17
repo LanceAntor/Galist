@@ -48,8 +48,8 @@ const PortalComponent = () => {
           
           // Draw ONLY the current frame (crucial for proper animation)
           // Set fixed portal size that fits within canvas
-          const portalWidth = 150;   // Fixed width that fits in 70px canvas
-          const portalHeight = 320; // Fixed height that fits in 250px canvas
+          const portalWidth = 190;   // Fixed width that fits in 70px canvas
+          const portalHeight = 200; // Fixed height that fits in 250px canvas
           const offsetX = (canvas.width - portalWidth) / 2;
           const offsetY = (canvas.height - portalHeight) / 2;
           
@@ -57,7 +57,7 @@ const PortalComponent = () => {
             img,
             framePos.x, framePos.y,           // source x, y (which frame to pick)
             portal.width, portal.height,     // source width, height (size of ONE frame)
-            offsetX, offsetY,               // dest x, y (centered)
+            offsetX, offsetY - 15,               // dest x, y (centered)
             portalWidth, portalHeight       // dest width, height (fixed size)
           );
         }
@@ -114,11 +114,11 @@ const PortalComponent = () => {
       {/* Portal Canvas - Always visible */}
       <canvas
         ref={canvasRef}
-        width={70}  // Small canvas - exactly ONE frame size scaled down
-        height={250} // Increased height to prevent bottom cutoff
+        width={45}  // Small canvas - exactly ONE frame size scaled down
+        height={140} // Increased height to prevent bottom cutoff
         style={{
           imageRendering: 'pixelated',
-          // border: '1px solid red'
+          border: '1px solid red'
         }}
       />
     </div>
