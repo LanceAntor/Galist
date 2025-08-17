@@ -13,13 +13,15 @@ export class CollisionDetection {
 
   /**
    * Main collision detection and physics update function
-   * @param {Array} circles - Array of circle objects
-   * @param {Array} connections - Array of connection objects
+   * @param {Object|Array} circles - Single circle object or array of circle objects
    * @param {Array} suckingCircles - Array of circle IDs being sucked
-   * @returns {Array} Updated circles with new positions and velocities
+   * @returns {Object|Array} Updated circle(s) with new positions and velocities
    */
-  updatePhysics(circles, connections, suckingCircles) {
-    return circles.map(circle => {
+  updatePhysics(circles, suckingCircles = []) {
+    const isArray = Array.isArray(circles)
+    const circleArray = isArray ? circles : [circles]
+    
+    const updatedCircles = circleArray.map(circle => {
       if (suckingCircles.includes(circle.id)) {
         return circle; // Skip physics for sucking circles
       }
@@ -36,12 +38,6 @@ export class CollisionDetection {
       newVelocityX = rightSquareCollision.velocityX;
       newVelocityY = rightSquareCollision.velocityY;
 
-      const leftSquareCollision = this.checkLeftSquareCollision(newX, newY, circle, newVelocityX, newVelocityY);
-      newX = leftSquareCollision.x;
-      newY = leftSquareCollision.y;
-      newVelocityX = leftSquareCollision.velocityX;
-      newVelocityY = leftSquareCollision.velocityY;
-
       const controlsCollision = this.checkControlsCollision(newX, newY, circle, newVelocityX, newVelocityY);
       newX = controlsCollision.x;
       newY = controlsCollision.y;
@@ -49,7 +45,7 @@ export class CollisionDetection {
       newVelocityY = controlsCollision.velocityY;
 
       // Circle-to-circle collisions
-      const circleCollision = this.checkCircleCollisions(newX, newY, newVelocityX, newVelocityY, circle, circles, suckingCircles);
+      const circleCollision = this.checkCircleCollisions(newX, newY, newVelocityX, newVelocityY, circle, circleArray, suckingCircles);
       newX = circleCollision.x;
       newY = circleCollision.y;
       newVelocityX = circleCollision.velocityX;
@@ -78,6 +74,9 @@ export class CollisionDetection {
         velocityY: newVelocityY
       };
     });
+    
+    // Return single object if input was single object, array if input was array
+    return isArray ? updatedCircles : updatedCircles[0];
   }
 
   /**
@@ -122,56 +121,13 @@ export class CollisionDetection {
 
   /**
    * Check collision with left square (suction box)
+   * @param {number} x - Circle x position
+   * @param {number} y - Circle y position
+   * @param {Object} circle - Circle object
+   * @param {number} velocityX - Circle x velocity
+   * @param {number} velocityY - Circle y velocity
+   * @param {Object} portalInfo - Portal state information (isVisible, canvasWidth)
    */
-  checkLeftSquareCollision(x, y, circle, velocityX, velocityY) {
-    const leftSquareLeft = 0
-    const leftSquareRight = 130
-    const leftSquareTop = (window.innerHeight / 2) - 50
-    const leftSquareBottom = (window.innerHeight / 2) + 50
-    const entranceTop = leftSquareTop + 10
-    const entranceBottom = leftSquareBottom - 10
-
-    let newX = x
-    let newY = y
-    let newVelocityX = velocityX
-    let newVelocityY = velocityY
-
-    // Check if circle is colliding with left square
-    if (newX - this.circleRadius <= leftSquareRight && 
-        newX + this.circleRadius >= leftSquareLeft && 
-        newY - this.circleRadius <= leftSquareBottom && 
-        newY + this.circleRadius >= leftSquareTop) {
-      
-      // Check if circle is at the entrance (right side, middle area)
-      const isAtEntrance = newX - this.circleRadius <= leftSquareRight && 
-                          newX - this.circleRadius >= leftSquareRight - 20 && 
-                          newY >= entranceTop && 
-                          newY <= entranceBottom
-
-      if (!isAtEntrance) {
-        // Bounce off walls if not at entrance
-        if (newX - this.circleRadius <= leftSquareRight && circle.x - this.circleRadius > leftSquareRight) {
-          // Hit right wall
-          newVelocityX = Math.abs(newVelocityX) * this.wallBounceEnergyLoss
-          newX = leftSquareRight + this.circleRadius
-        }
-        if (newY - this.circleRadius <= leftSquareBottom && newY + this.circleRadius >= leftSquareTop) {
-          // Hit top or bottom wall
-          if (newY < leftSquareTop + 50) {
-            // Hit top wall
-            newVelocityY = -Math.abs(newVelocityY) * this.wallBounceEnergyLoss
-            newY = leftSquareTop - this.circleRadius
-          } else {
-            // Hit bottom wall
-            newVelocityY = Math.abs(newVelocityY) * this.wallBounceEnergyLoss
-            newY = leftSquareBottom + this.circleRadius
-          }
-        }
-      }
-    }
-
-    return { x: newX, y: newY, velocityX: newVelocityX, velocityY: newVelocityY }
-  }
 
   /**
    * Check collision with controls area
@@ -244,17 +200,40 @@ export class CollisionDetection {
           newX += separationX;
           newY += separationY;
           
-          // Calculate elastic collision response
-          const relativeVelocityX = newVelocityX - (otherCircle.velocityX || 0);
-          const relativeVelocityY = newVelocityY - (otherCircle.velocityY || 0);
+          // Calculate masses (assuming equal mass for simplicity)
+          const mass1 = 1;
+          const mass2 = 1;
+          
+          // Get velocities
+          const v1x = newVelocityX;
+          const v1y = newVelocityY;
+          const v2x = otherCircle.velocityX || 0;
+          const v2y = otherCircle.velocityY || 0;
+          
+          // Calculate relative velocity
+          const relativeVelocityX = v1x - v2x;
+          const relativeVelocityY = v1y - v2y;
           const velocityAlongCollision = (relativeVelocityX * dx + relativeVelocityY * dy) / distance;
           
-          if (velocityAlongCollision > 0) return; // Objects are separating
+          // Only resolve collision if objects are approaching
+          if (velocityAlongCollision > 0) return;
           
-          const collisionForce = velocityAlongCollision * this.restitution;
+          // Calculate collision impulse
+          const impulse = (2 * velocityAlongCollision) / (mass1 + mass2) * this.restitution;
           
-          newVelocityX -= collisionForce * (dx / distance);
-          newVelocityY -= collisionForce * (dy / distance);
+          // Update current circle's velocity
+          newVelocityX -= impulse * mass2 * (dx / distance);
+          newVelocityY -= impulse * mass2 * (dy / distance);
+          
+          // Update other circle's velocity (this is important for proper bouncing)
+          // Note: This modifies the other circle directly, which is okay since we're processing all circles
+          if (otherCircle.velocityX !== undefined && otherCircle.velocityY !== undefined) {
+            otherCircle.velocityX += impulse * mass1 * (dx / distance);
+            otherCircle.velocityY += impulse * mass1 * (dy / distance);
+          } else {
+            otherCircle.velocityX = impulse * mass1 * (dx / distance);
+            otherCircle.velocityY = impulse * mass1 * (dy / distance);
+          }
         }
       }
     });

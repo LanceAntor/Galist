@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Portal } from './portal.js';
 
-const PortalComponent = () => {
+const PortalComponent = ({ onPortalStateChange }) => {
   const [portal] = useState(new Portal());
   const [isOpen, setIsOpen] = useState(false); // Start as closed
   const canvasRef = useRef(null);
@@ -19,6 +19,16 @@ const PortalComponent = () => {
       setIsOpen(true);
     }
   };
+
+  // Notify parent component about portal state changes
+  useEffect(() => {
+    if (onPortalStateChange) {
+      onPortalStateChange({
+        isVisible: portal.isVisible(),
+        canvasWidth: 45 // Fixed canvas width from the portal component
+      });
+    }
+  }, [isOpen, onPortalStateChange, portal]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,6 +50,14 @@ const PortalComponent = () => {
         
         // Update portal
         portal.update(deltaTime);
+        
+        // Notify parent about portal state changes during animation
+        if (onPortalStateChange) {
+          onPortalStateChange({
+            isVisible: portal.isVisible(),
+            canvasWidth: 45
+          });
+        }
         
         // Only draw if portal is visible
         if (portal.isVisible()) {
@@ -80,7 +98,7 @@ const PortalComponent = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [portal]);
+  }, [portal, onPortalStateChange]);
 
   return (
     <div 

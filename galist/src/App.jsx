@@ -15,9 +15,19 @@ function App() {
   const [connections, setConnections] = useState([])
   const animationRef = useRef()
   const mouseHistoryRef = useRef([])
-  const [leftSquareOpen, setLeftSquareOpen] = useState(false)
   const [suckingCircles, setSuckingCircles] = useState([])
   const [suckedCircles, setSuckedCircles] = useState([]) // Track circles that have been sucked out
+
+  // Portal state management
+  const [portalInfo, setPortalInfo] = useState({ 
+    isVisible: false, 
+    canvasWidth: 45 
+  })
+
+  // Wrap setPortalInfo in useCallback to prevent unnecessary re-renders
+  const handlePortalStateChange = useCallback((newPortalInfo) => {
+    setPortalInfo(newPortalInfo);
+  }, []);
 
   // Exercise system states
   const exerciseManagerRef = useRef(new ExerciseManager())
@@ -70,7 +80,6 @@ function App() {
     setConnections([])
     setSuckingCircles([])
     setSuckedCircles([])
-    setLeftSquareOpen(false)
     setShowValidationResult(false)
     setValidationResult(null)
     setIsSubmitted(false)
@@ -127,60 +136,105 @@ function App() {
     }
   }, [isSubmitted, circles.length, suckedCircles.length])
 
+  // Helper function to get the complete chain order from head to tail
+  const getChainOrder = useCallback((startCircleId) => {
+    const chainOrder = []
+    let currentId = startCircleId
+    const visited = new Set()
+    
+    // If starting circle is not a head, find the head first
+    if (!isHeadNode(startCircleId)) {
+      // Traverse backwards to find the head
+      let searchId = startCircleId
+      const backwardVisited = new Set()
+      
+      while (searchId && !backwardVisited.has(searchId)) {
+        backwardVisited.add(searchId)
+        const incomingConnection = connections.find(conn => conn.to === searchId)
+        if (incomingConnection && !isHeadNode(incomingConnection.from)) {
+          searchId = incomingConnection.from
+        } else if (incomingConnection) {
+          currentId = incomingConnection.from // Found the head
+          break
+        } else {
+          break
+        }
+      }
+    }
+    
+    // Now traverse from head to tail
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId)
+      chainOrder.push(currentId)
+      
+      // Find the next node in the chain
+      const nextConnection = connections.find(conn => conn.from === currentId)
+      currentId = nextConnection ? nextConnection.to : null
+    }
+    
+    return chainOrder
+  }, [connections, isHeadNode])
+
   // Function to start chain suction effect
   const startChainSuction = useCallback((startCircleId) => {
-    const connectedIds = findConnectedCircles(startCircleId)
+    // Get the proper head-to-tail chain order
+    const chainOrder = getChainOrder(startCircleId)
     
-    // Check if this is the head node using the helper function
-    const isHead = isHeadNode(startCircleId)
+    // Add the triggering circle to sucking list (don't remove it immediately)
+    setSuckingCircles(prev => {
+      if (!prev.includes(startCircleId)) {
+        return [...prev, startCircleId]
+      }
+      return prev
+    })
     
-    // Remove the triggering circle immediately and mark it as sucked
-    setCircles(prevCircles => 
-      prevCircles.filter(c => c.id !== startCircleId)
-    )
-    setSuckedCircles(prev => [...prev, startCircleId])
-    
-    // Start the chain reaction for remaining connected circles
-    const remainingCircles = connectedIds.filter(id => id !== startCircleId)
+    // Start the chain reaction in proper order (head first, tail last)
+    const remainingCircles = chainOrder.filter(id => id !== startCircleId)
     
     remainingCircles.forEach((circleId, index) => {
-      const delay = isHead ? index * 50 : index * 400 // Much faster if head node (50ms vs 150ms)
+      // Head nodes get sucked first (faster), tail last (slower)
+      const delay = (index + 1) * 150 // Start from 150ms for the first remaining circle
       
       setTimeout(() => {
         // Add circle to sucking list (this will make it get pulled toward entrance)
         setSuckingCircles(prev => [...prev, circleId])
       }, delay)
     })
-  }, [findConnectedCircles, isHeadNode])
+  }, [getChainOrder])
 
-  // Animation loop for floating circles with momentum
+  // PHYSICS SYSTEM - Simple animation loop adapted for portal
   useEffect(() => {
-    const animate = () => {
-      setCircles(prevCircles => 
-        prevCircles.map(circle => {
+    let isAnimating = true
+
+    const gameLoop = () => {
+      if (!isAnimating) return
+
+      setCircles(prevCircles => {
+        // First pass: Handle special behaviors (suction, portal interactions) without collision detection
+        const circlesWithSpecialBehavior = prevCircles.map(circle => {
           // Skip physics for dragged circle
           if (draggedCircle && circle.id === draggedCircle.id) {
             return circle
           }
 
-          // Special behavior for sucking circles
+          // Special behavior for sucking circles - target portal center
           if (suckingCircles.includes(circle.id)) {
-            // Target the entrance area of the left square
-            const entranceX = 130 // Right edge of left square
-            const entranceY = window.innerHeight / 2 // Center of entrance vertically
-            const dx = entranceX - circle.x
-            const dy = entranceY - circle.y
+            // Portal center calculation (using portal canvas width)
+            const portalCenterX = 10 + (portalInfo.canvasWidth / 2) // Center of the portal canvas
+            const portalCenterY = window.innerHeight / 2 // Center of entrance vertically
+            const dx = portalCenterX - circle.x
+            const dy = portalCenterY - circle.y
             const distance = Math.sqrt(dx * dx + dy * dy)
             
-            // Check if circle has reached the entrance area
-            const leftSquareTop = (window.innerHeight / 2) - 50
-            const leftSquareBottom = (window.innerHeight / 2) + 50
-            const entranceTop = leftSquareTop + 10
-            const entranceBottom = leftSquareBottom - 10
+            // Check if circle has reached the portal entrance area
+            const portalTop = (window.innerHeight / 2) - 50
+            const portalBottom = (window.innerHeight / 2) + 50
+            const entranceTop = portalTop + 10
+            const entranceBottom = portalBottom - 10
             
-            if (circle.x >= 110 && circle.x <= 135 && 
+            if (circle.x >= 10 && circle.x <= 35 && 
                 circle.y >= entranceTop && circle.y <= entranceBottom) {
-              // Circle has reached the entrance - remove it and mark as sucked
+              // Circle has reached the portal entrance - remove it and mark as sucked
               setTimeout(() => {
                 setCircles(prevCircles => 
                   prevCircles.filter(c => c.id !== circle.id)
@@ -195,7 +249,7 @@ function App() {
               return circle
             }
             
-            // Strong suction force toward entrance - boost if triggered by head node
+            // Strong suction force toward portal entrance
             const baseForce = 2.0
             const headBoost = 1.5 // Extra boost when head node triggered the chain
             const suctionForce = baseForce + headBoost
@@ -211,11 +265,11 @@ function App() {
             }
           }
 
-          // Add suction effect when left square is open
-          if (leftSquareOpen) {
-            const leftSquareCenter = { x: 65, y: window.innerHeight / 2 }
-            const dx = leftSquareCenter.x - circle.x
-            const dy = leftSquareCenter.y - circle.y
+          // Add gentle suction effect when portal is open
+          if (portalInfo.isVisible && !suckingCircles.includes(circle.id)) {
+            const portalCenter = { x: 10 + (portalInfo.canvasWidth / 2), y: window.innerHeight / 2 }
+            const dx = portalCenter.x - circle.x
+            const dy = portalCenter.y - circle.y
             const distance = Math.sqrt(dx * dx + dy * dy)
             
             if (distance > 80) { // Only apply suction if not too close
@@ -226,27 +280,27 @@ function App() {
             }
           }
 
-          // Handle special left square suction logic first
-          if (leftSquareOpen) {
-            const leftSquareRight = 130
-            const leftSquareTop = (window.innerHeight / 2) - 50
-            const leftSquareBottom = (window.innerHeight / 2) + 50
-            const entranceTop = leftSquareTop + 10
-            const entranceBottom = leftSquareBottom - 10
+          // Handle special portal suction logic for manual triggers
+          if (portalInfo.isVisible) {
+            const portalRight = 10 + portalInfo.canvasWidth + 20
+            const portalTop = (window.innerHeight / 2) - 50
+            const portalBottom = (window.innerHeight / 2) + 50
+            const entranceTop = portalTop + 10
+            const entranceBottom = portalBottom - 10
             const circleRadius = 30
 
             const newX = circle.x + (circle.velocityX || 0)
             const newY = circle.y + (circle.velocityY || 0)
 
             // Check if circle is entering through the entrance
-            if (newX - circleRadius <= leftSquareRight && 
-                newX - circleRadius >= leftSquareRight - 20 && 
+            if (newX - circleRadius <= portalRight && 
+                newX - circleRadius >= portalRight - 20 && 
                 newY >= entranceTop && 
                 newY <= entranceBottom &&
                 !suckingCircles.includes(circle.id)) {
               
               const isHead = isHeadNode(circle.id)
-              const hasAnyHeadNode = circles.some(c => isHeadNode(c.id))
+              const hasAnyHeadNode = prevCircles.some(c => isHeadNode(c.id))
               
               if (isHead || !hasAnyHeadNode) {
                 startChainSuction(circle.id)
@@ -256,24 +310,52 @@ function App() {
             }
           }
 
-          // Apply collision detection and physics
-          const updatedCircles = collisionDetection.updatePhysics([circle], connections, suckingCircles)
-          return updatedCircles[0] || circle
+          return circle
         })
-      )
-      animationRef.current = requestAnimationFrame(animate)
+
+        // Second pass: Apply collision detection and physics to ALL circles at once
+        // This ensures proper collision interactions between all circles
+        // Note: Include dragged circle in collision detection so other circles can bounce off it
+        const allCirclesForCollision = circlesWithSpecialBehavior
+        const draggedCircleData = draggedCircle ? 
+          allCirclesForCollision.find(circle => circle.id === draggedCircle.id) : null
+        
+        // Apply collision detection to all circles (including dragged one for collision purposes)
+        // but only update physics for non-dragged circles
+        const updatedAllCircles = allCirclesForCollision.length > 0 ? 
+          collisionDetection.updatePhysics(allCirclesForCollision, suckingCircles) : []
+        
+        // For the final result, keep the dragged circle's position but allow its velocity updates from collisions
+        let finalCircles = updatedAllCircles
+        if (draggedCircleData) {
+          finalCircles = updatedAllCircles.map(circle => {
+            if (circle.id === draggedCircle.id) {
+              // Keep dragged circle's position but preserve velocity changes from collisions
+              return {
+                ...draggedCircleData,
+                velocityX: circle.velocityX, // Keep collision-affected velocity
+                velocityY: circle.velocityY  // Keep collision-affected velocity
+              }
+            }
+            return circle
+          })
+        }
+          
+        return finalCircles
+      })
+
+      animationRef.current = requestAnimationFrame(gameLoop)
     }
 
-    if (circles.length > 0) {
-      animationRef.current = requestAnimationFrame(animate)
-    }
+    animationRef.current = requestAnimationFrame(gameLoop)
 
     return () => {
+      isAnimating = false
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [circles, draggedCircle, leftSquareOpen, findConnectedCircles, suckingCircles, startChainSuction, suckedCircles, isHeadNode, connections])
+  }, [portalInfo, suckingCircles, draggedCircle, isHeadNode, startChainSuction, findConnectedCircles])
 
   // Handle connection removal when circles are sucked
   useEffect(() => {
@@ -294,23 +376,19 @@ function App() {
     }
   }, [suckedCircles])
 
-  // Auto-suction effect when left square opens - prioritize head nodes
+  // Auto-suction effect when portal opens - prioritize head nodes
   useEffect(() => {
-    if (leftSquareOpen && circles.length > 0) {
+    if (portalInfo.isVisible && circles.length > 0) {
       // Find all head nodes
       const headNodes = circles.filter(circle => isHeadNode(circle.id))
       
       if (headNodes.length > 0) {
-        // Start pulling head nodes toward entrance (not instant suction)
+        // Start chain suction for each head node with proper head-to-tail ordering
         headNodes.forEach((headNode, index) => {
           setTimeout(() => {
-            setSuckingCircles(prev => {
-              if (!prev.includes(headNode.id)) {
-                return [...prev, headNode.id]
-              }
-              return prev
-            })
-          }, index * 200) // 200ms delay between head nodes if multiple exist
+            // Start the complete chain suction from this head node
+            startChainSuction(headNode.id)
+          }, index * 1000) // 1 second delay between different chains
         })
       } else {
         // If no head nodes exist, find isolated nodes (no connections)
@@ -332,11 +410,11 @@ function App() {
           })
         }
       }
-    } else if (!leftSquareOpen) {
-      // Clear sucking circles when suction box is closed
+    } else if (!portalInfo.isVisible) {
+      // Clear sucking circles when portal is closed
       setSuckingCircles([])
     }
-  }, [leftSquareOpen, circles, connections, isHeadNode])
+  }, [portalInfo.isVisible, circles, connections, isHeadNode, startChainSuction])
 
   // Mouse event handlers for dragging
   const handleMouseDown = (e, circle) => {
@@ -458,7 +536,7 @@ function App() {
       document.removeEventListener('mousemove', handleMouseMoveGlobal)
       document.removeEventListener('mouseup', handleMouseUpGlobal)
     }
-  }, [draggedCircle, dragOffset, leftSquareOpen, findConnectedCircles])
+  }, [draggedCircle, dragOffset, findConnectedCircles])
 
   const launchCircle = () => {
     if (!address.trim() || !value.trim()) return
@@ -467,9 +545,9 @@ function App() {
       id: Date.now(),
       address: address.trim(),
       value: value.trim(),
-      x: window.innerWidth - 10, // Right edge of right square (right: -40px means 40px beyond right edge, center would be -40 + 50)
-      y: window.innerHeight - 55, // Center of right square vertically (bottom: 10px + 45px to center of 90px height)
-      velocityX: -8 - Math.random() * 5, // Launch leftward with random velocity (since square is angled)
+      x: window.innerWidth - 10, // Right edge of right square
+      y: window.innerHeight - 55, // Center of right square vertically
+      velocityX: -8 - Math.random() * 5, // Launch leftward with random velocity
       velocityY: -5 - Math.random() * 3 // Launch upward with random velocity
     }
 
@@ -522,28 +600,11 @@ function App() {
         </div>
       )}
 
-      
-
       {/* Portal and right square */}
-      <PortalComponent />
+      <PortalComponent onPortalStateChange={handlePortalStateChange} />
       <div className="right-square" style={{
-        
-        outlineOffset: '10px'
+        outlineOffset: '5px'
       }}></div>
-
-      {/* DEBUG: Collision detection boundaries
-      <div style={{
-        position: 'absolute',
-        left: `${window.innerWidth + 15 - 95}px`, // rightSquareLeft
-        top: `${window.innerHeight - 55}px`,  // rightSquareTop
-        width: `100px`, // square width
-        height: `90px`, // square height
-        border: '2px solid cyan',
-        transform: 'rotate(-40deg)'
-        background: 'rgba(0, 255, 255, 0.1)',
-        pointerEvents: 'none',
-        zIndex: 15
-      }}></div> */}
 
       {/* Input controls */}
       <div className="controls">
@@ -604,7 +665,7 @@ function App() {
           if (!fromCircle && !toCircle) return null
           
           // If one circle is missing (sucked), use the entrance position
-          const entranceX = 130
+          const entranceX = 10 + (portalInfo.canvasWidth / 2) // Portal center
           const entranceY = window.innerHeight / 2
           
           const fromX = fromCircle ? fromCircle.x : entranceX
