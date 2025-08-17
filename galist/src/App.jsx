@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import { ExerciseManager, EXERCISE_TEMPLATES } from './LinkedListExercise'
 import { collisionDetection } from './CollisionDetection'
+import PortalComponent from './PortalComponent'
 
 function App() {
   const [address, setAddress] = useState('')
@@ -63,15 +64,6 @@ function App() {
     return hasIncoming && !hasOutgoing
   }, [connections])
 
-  // Toggle left square state
-  const toggleLeftSquare = () => {
-    if (!isSubmitted && circles.length > 0) {
-      // Opening the suction submits the answer
-      submitExerciseAnswer()
-    }
-    setLeftSquareOpen(!leftSquareOpen)
-  }
-
   // Exercise management functions
   const resetWorkspace = useCallback(() => {
     setCircles([])
@@ -84,17 +76,6 @@ function App() {
     setIsSubmitted(false)
     exerciseManagerRef.current.reset()
   }, [])
-
-  const submitExerciseAnswer = useCallback(() => {
-    if (!currentExercise || circles.length === 0) return
-    
-    try {
-      exerciseManagerRef.current.submitAnswer(circles, connections)
-      setIsSubmitted(true)
-    } catch (error) {
-      console.error('Error submitting answer:', error)
-    }
-  }, [currentExercise, circles, connections])
 
   const loadExercise = useCallback(() => {
     const exercise = exerciseManagerRef.current.loadExercise('basic')
@@ -543,18 +524,11 @@ function App() {
 
       
 
-      {/* Left and right squares */}
-      <div className={`left-square ${leftSquareOpen ? 'open' : 'closed'}`}>
-        <button 
-          onClick={toggleLeftSquare}
-          className="toggle-button"
-        >
-          {leftSquareOpen ? 'OPEN' : 'CLOSED'}
-        </button>
-      </div>
+      {/* Portal and right square */}
+      <PortalComponent />
       <div className="right-square" style={{
         
-        outlineOffset: '5px'
+        outlineOffset: '10px'
       }}></div>
 
       {/* DEBUG: Collision detection boundaries
