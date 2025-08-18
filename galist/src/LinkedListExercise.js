@@ -9,16 +9,23 @@ export class LinkedListExercise {
   }
 
   // Validate the user's linked list against the exercise requirements
-  validateSubmission(circles, connections) {
+  validateSubmission(circles, connections, entryOrder = null) {
     const result = {
       isCorrect: false,
       message: '',
       details: '',
       score: 0,
-      totalPoints: 100
+      totalPoints: entryOrder ? 120 : 100 // Extra points for portal entry order if provided
     };
 
     try {
+      // Ensure we have valid input data
+      if (!circles || !connections) {
+        result.message = 'No submission data provided';
+        result.details = 'Please create your linked list first.';
+        return result;
+      }
+
       // Check 1: Correct number of nodes (20 points)
       if (circles.length !== this.sequence.length) {
         result.message = `Wrong number of nodes!`;
@@ -64,16 +71,32 @@ export class LinkedListExercise {
       }
       result.score += 20;
 
+      // Check 5: Portal entry order validation (20 bonus points if portal was used)
+      if (entryOrder && entryOrder.length > 0) {
+        const orderCheck = this.validatePortalEntryOrder(circles, connections, entryOrder);
+        if (orderCheck.isValid) {
+          result.score += 20;
+          result.message = '🌟 PERFECT! Your linked list is correct AND entered the portal in proper order!';
+          result.details = `✅ Correct values: [${this.sequence.join(' → ')}]\n✅ Correct addresses\n✅ Perfect structure\n✅ All connections valid\n🌀 Perfect portal entry order!`;
+        } else {
+          result.message = '⚠️ Linked list is correct but portal entry order was wrong!';
+          result.details = `✅ Correct values: [${this.sequence.join(' → ')}]\n✅ Correct addresses\n✅ Perfect structure\n✅ All connections valid\n❌ ${orderCheck.message}`;
+        }
+      } else {
+        result.message = '🎉 Perfect! Your linked list is completely correct!';
+        result.details = `✅ Correct values: [${this.sequence.join(' → ')}]\n✅ Correct addresses\n✅ Perfect structure\n✅ All connections valid`;
+      }
+
       // All checks passed!
       result.isCorrect = true;
-      result.message = '🎉 Perfect! Your linked list is completely correct!';
-      result.details = `✅ Correct values: [${this.sequence.join(' → ')}]\n✅ Correct addresses\n✅ Perfect structure\n✅ All connections valid`;
       
       return result;
 
     } catch (error) {
-      result.message = 'Error validating your submission';
-      result.details = error.message;
+      // Only log and return error result for actual critical failures
+      console.warn('Validation processing error:', error);
+      result.message = 'Unable to validate submission';
+      result.details = 'Please try submitting again.';
       return result;
     }
   }
@@ -235,18 +258,95 @@ export class LinkedListExercise {
 
     return report;
   }
+
+  // Validate portal entry order - circles should enter in linked list order (head to tail)
+  validatePortalEntryOrder(circles, connections, entryOrder) {
+    try {
+      // Build the correct traversal order by following the linked list chain
+      const correctOrder = this.getLinkedListTraversalOrder(circles, connections);
+      
+      if (!correctOrder || correctOrder.length === 0) {
+        return {
+          isValid: false,
+          message: "Could not determine correct traversal order"
+        };
+      }
+
+      // Compare the entry order with the correct linked list order
+      if (entryOrder.length !== correctOrder.length) {
+        return {
+          isValid: false,
+          message: `Expected ${correctOrder.length} circles to enter portal, but ${entryOrder.length} entered`
+        };
+      }
+
+      // Check if the entry order matches the linked list traversal order
+      for (let i = 0; i < entryOrder.length; i++) {
+        if (entryOrder[i] !== correctOrder[i]) {
+          const entryCircle = circles.find(c => c.id === entryOrder[i]);
+          const correctCircle = circles.find(c => c.id === correctOrder[i]);
+          
+          return {
+            isValid: false,
+            message: `Wrong portal entry order! Expected ${correctCircle?.value || 'unknown'} at position ${i + 1}, but got ${entryCircle?.value || 'unknown'}`
+          };
+        }
+      }
+
+      return {
+        isValid: true,
+        message: "Perfect portal entry order!"
+      };
+
+    } catch (error) {
+      return {
+        isValid: false,
+        message: `Error validating portal entry order: ${error.message}`
+      };
+    }
+  }
+
+  // Get the correct traversal order by following the linked list from head to tail
+  getLinkedListTraversalOrder(circles, connections) {
+    // Find the head node (has outgoing connection but no incoming)
+    const headCircle = circles.find(circle => {
+      const hasOutgoing = connections.some(conn => conn.from === circle.id);
+      const hasIncoming = connections.some(conn => conn.to === circle.id);
+      return hasOutgoing && !hasIncoming;
+    });
+
+    if (!headCircle) {
+      throw new Error("No head node found");
+    }
+
+    // Traverse the linked list from head to tail
+    const traversalOrder = [];
+    let currentId = headCircle.id;
+    const visited = new Set();
+
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      traversalOrder.push(currentId);
+
+      // Find the next node
+      const nextConnection = connections.find(conn => conn.from === currentId);
+      currentId = nextConnection ? nextConnection.to : null;
+    }
+
+    return traversalOrder;
+  }
 }
 
 // Predefined exercise templates
 export const EXERCISE_TEMPLATES = {
   basic: {
-    sequence: [15, 59, 10, 12, 30],
+    sequence: [1, 2, 3, 4, 5],
     addresses: {
-      15: "a120",
-      59: "a150",
-      10: "a170",
-      12: "a190",
-      30: "a210"
+      1: "a",
+      2: "b",
+      3: "c",
+      4: "d",
+      5: "e"
     },
     title: "CREATE THIS LINK LIST",
     description: "Create a linked list with the given values and addresses in the correct order"
@@ -309,14 +409,68 @@ export class ExerciseManager {
   }
 
   // Validate submission (called after all circles are sucked)
-  validateSubmission() {
-    if (!this.currentExercise || !this.submissionData) {
-      throw new Error('No submission to validate');
+  validateSubmission(circles = null, connections = null, entryOrder = null) {
+    console.log('validateSubmission called with:', { circles, connections, entryOrder });
+    
+    // If parameters are provided (even if empty arrays), use them directly (for portal validation)
+    if (circles !== null && connections !== null) {
+      console.log('Using provided parameters for validation');
+      
+      if (!this.currentExercise) {
+        console.warn('No exercise loaded, attempting to load basic exercise...');
+        try {
+          this.loadExercise('basic');
+        } catch (loadError) {
+          console.error('Failed to load default exercise:', loadError);
+          // Return a gentle error instead of throwing
+          return {
+            isCorrect: false,
+            message: 'System not ready',
+            details: 'Please try again in a moment.',
+            score: 0,
+            totalPoints: 100
+          };
+        }
+      }
+
+      const result = this.currentExercise.validateSubmission(
+        circles,
+        connections,
+        entryOrder
+      );
+
+      return result;
+    }
+
+    // Otherwise, use stored submission data (for manual validation)
+    console.log('Using stored submission data for validation');
+    
+    if (!this.currentExercise) {
+      console.error('No exercise loaded for manual validation');
+      return {
+        isCorrect: false,
+        message: 'System not ready',
+        details: 'Please refresh and try again.',
+        score: 0,
+        totalPoints: 100
+      };
+    }
+    
+    if (!this.submissionData) {
+      console.warn('No stored submission data for manual validation');
+      return {
+        isCorrect: false,
+        message: 'No submission found',
+        details: 'Please create your linked list first.',
+        score: 0,
+        totalPoints: 100
+      };
     }
 
     const result = this.currentExercise.validateSubmission(
       this.submissionData.circles,
-      this.submissionData.connections
+      this.submissionData.connections,
+      entryOrder
     );
 
     this.isWaitingForValidation = false;

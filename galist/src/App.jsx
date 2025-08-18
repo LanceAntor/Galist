@@ -17,6 +17,7 @@ function App() {
   const mouseHistoryRef = useRef([])
   const [suckingCircles, setSuckingCircles] = useState([])
   const [suckedCircles, setSuckedCircles] = useState([]) // Track circles that have been sucked out
+  const [originalSubmission, setOriginalSubmission] = useState(null) // Store original circles and connections for validation
 
   // Portal state management
   const [portalInfo, setPortalInfo] = useState({ 
@@ -40,7 +41,6 @@ function App() {
   const [currentExercise, setCurrentExercise] = useState(null)
   const [showValidationResult, setShowValidationResult] = useState(false)
   const [validationResult, setValidationResult] = useState(null)
-  const [isSubmitted, setIsSubmitted] = useState(false)
   const [showInstructionPopup, setShowInstructionPopup] = useState(false)
 
   // Function to toggle instruction popup
@@ -97,9 +97,9 @@ function App() {
     setConnections([])
     setSuckingCircles([])
     setSuckedCircles([])
+    setOriginalSubmission(null)
     setShowValidationResult(false)
     setValidationResult(null)
-    setIsSubmitted(false)
     exerciseManagerRef.current.reset()
   }, [])
 
@@ -131,27 +131,8 @@ function App() {
     }
   }, [showInstructionPopup, currentExercise, loadExercise])
 
-  // Check when all circles are gone and validate
-  useEffect(() => {
-    if (isSubmitted && circles.length === 0 && suckedCircles.length > 0) {
-      // All circles have been sucked - validate the submission
-      setTimeout(() => {
-        try {
-          const result = exerciseManagerRef.current.validateSubmission()
-          setValidationResult(result)
-          setShowValidationResult(true)
-        } catch (error) {
-          setValidationResult({
-            isCorrect: false,
-            message: 'Validation Error',
-            details: error.message,
-            score: 0
-          })
-          setShowValidationResult(true)
-        }
-      }, 1500) // Wait 1.5 seconds after all circles are gone
-    }
-  }, [isSubmitted, circles.length, suckedCircles.length])
+  // Note: Validation is now handled directly when the last circle enters the portal
+  // This useEffect has been removed to prevent duplicate validation modals
 
   // Helper function to get the complete chain order from head to tail
   const getChainOrder = useCallback((startCircleId) => {
@@ -194,6 +175,12 @@ function App() {
 
   // Function to start chain suction effect
   const startChainSuction = useCallback((startCircleId) => {
+    // Capture the original submission data before any circles are sucked
+    setOriginalSubmission({
+      circles: circles.map(c => ({ ...c })), // Deep copy
+      connections: connections.map(c => ({ ...c })) // Deep copy
+    });
+    
     // Get the proper head-to-tail chain order
     const chainOrder = getChainOrder(startCircleId)
     
@@ -217,7 +204,7 @@ function App() {
         setSuckingCircles(prev => [...prev, circleId])
       }, delay)
     })
-  }, [getChainOrder])
+  }, [getChainOrder, circles, connections])
 
   // PHYSICS SYSTEM - Simple animation loop adapted for portal
   useEffect(() => {
@@ -253,17 +240,86 @@ function App() {
                 circle.y >= entranceTop && circle.y <= entranceBottom) {
               // Circle has reached the portal entrance - remove it and mark as sucked
               setTimeout(() => {
-                setCircles(prevCircles => 
-                  prevCircles.filter(c => c.id !== circle.id)
-                )
+                setCircles(prevCircles => {
+                  const newCircles = prevCircles.filter(c => c.id !== circle.id);
+                  
+                  // Check if this was the last circle - if so, validate the submission
+                  if (newCircles.length === 0 && currentExercise) {
+                    console.log('All circles entered portal - validating submission...');
+                    
+                    // Ensure exercise is loaded
+                    if (!exerciseManagerRef.current.currentExercise) {
+                      console.warn('No exercise loaded, loading basic exercise...');
+                      exerciseManagerRef.current.loadExercise('basic');
+                    }
+                    
+                    // Get the order in which circles entered the portal
+                    const entryOrder = [...suckedCircles, circle.id];
+                    
+                    // Use the original submission data captured when suction started
+                    const submissionData = originalSubmission || {
+                      circles: [...prevCircles], // Fallback to current circles
+                      connections: [...connections] // Fallback to current connections
+                    };
+                    
+                    // Validate the submission
+                    setTimeout(() => {
+                      try {
+                        console.log('Current exercise:', currentExercise);
+                        console.log('ExerciseManager currentExercise:', exerciseManagerRef.current.currentExercise);
+                        console.log('Submission data:', submissionData);
+                        console.log('Original circles length:', submissionData.circles.length);
+                        console.log('Current connections length:', submissionData.connections.length);
+                        console.log('Entry order:', entryOrder);
+                        console.log('About to call validateSubmission with parameters:', {
+                          circles: submissionData.circles,
+                          connections: submissionData.connections,
+                          entryOrder: entryOrder
+                        });
+                        
+                        const result = exerciseManagerRef.current.validateSubmission(
+                          submissionData.circles, 
+                          submissionData.connections, 
+                          entryOrder
+                        );
+                        
+                        setValidationResult(result);
+                        setShowValidationResult(true);
+                        
+                        console.log('Validation result:', result);
+                      } catch (error) {
+                        console.error('Portal validation error:', error);
+                        // Only show error for critical failures
+                        if (error.message.includes('No exercise loaded') || 
+                            error.message.includes('No submission data') ||
+                            error.message.includes('Exercise template') ||
+                            error.message.includes('Critical')) {
+                          setValidationResult({
+                            isCorrect: false,
+                            message: 'System Error',
+                            details: error.message,
+                            score: 0,
+                            totalPoints: 100
+                          });
+                          setShowValidationResult(true);
+                        } else {
+                          // For validation logic errors, don't override the actual result
+                          console.warn('Non-critical validation error, continuing:', error);
+                        }
+                      }
+                    }, 500);
+                  }
+                  
+                  return newCircles;
+                });
                 
                 // Mark this circle as sucked
-                setSuckedCircles(prev => [...prev, circle.id])
+                setSuckedCircles(prev => [...prev, circle.id]);
                 
-                setSuckingCircles(prev => prev.filter(id => id !== circle.id))
-              }, 50)
+                setSuckingCircles(prev => prev.filter(id => id !== circle.id));
+              }, 50);
               
-              return circle
+              return circle;
             }
             
             // Strong suction force toward portal entrance
@@ -372,7 +428,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [portalInfo, suckingCircles, draggedCircle, isHeadNode, startChainSuction, findConnectedCircles])
+  }, [portalInfo, suckingCircles, draggedCircle, isHeadNode, startChainSuction, findConnectedCircles, connections, currentExercise, suckedCircles, originalSubmission])
 
   // Handle connection removal when circles are sucked
   useEffect(() => {
