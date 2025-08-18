@@ -7,6 +7,7 @@ import PortalComponent from './PortalComponent'
 function App() {
   const [address, setAddress] = useState('')
   const [value, setValue] = useState('')
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [circles, setCircles] = useState([])
   const [draggedCircle, setDraggedCircle] = useState(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
@@ -545,6 +546,11 @@ function App() {
     setConnectToAddress('')
   }
 
+  // Close duplicate address modal
+  const closeDuplicateModal = () => {
+    setShowDuplicateModal(false)
+  }
+
   // Handle circle deletion from popup
   const handleDeleteCircle = () => {
     if (!selectedCircle) return
@@ -639,6 +645,13 @@ function App() {
 
   const launchCircle = () => {
     if (!address.trim() || !value.trim()) return
+
+    // Check if address already exists
+    const addressExists = circles.some(circle => circle.address === address.trim())
+    if (addressExists) {
+      setShowDuplicateModal(true)
+      return
+    }
 
     const newCircle = {
       id: Date.now(),
@@ -955,6 +968,22 @@ function App() {
                 <button onClick={handleDeleteCircle} className="popup-button delete-btn">DELETE</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Address Error Modal */}
+      {showDuplicateModal && (
+        <div className="error-modal-overlay" onClick={closeDuplicateModal}>
+          <div className="error-modal-content" onClick={(e) => e.stopPropagation()}>
+            {/* X button to close modal */}
+            <button className="error-modal-close-btn" onClick={closeDuplicateModal}>×</button>
+            
+            <div className="error-icon">
+              <span className="exclamation">!</span>
+            </div>
+            <div className="error-title">Duplicate Address</div>
+            <div className="error-message-text">Nodes cannot have the same address</div>
           </div>
         </div>
       )}
