@@ -545,6 +545,24 @@ function App() {
     setConnectToAddress('')
   }
 
+  // Handle circle deletion from popup
+  const handleDeleteCircle = () => {
+    if (!selectedCircle) return
+    
+    // Remove the circle
+    setCircles(prevCircles => prevCircles.filter(circle => circle.id !== selectedCircle.id))
+    
+    // Remove any connections involving this circle
+    setConnections(prevConnections => 
+      prevConnections.filter(conn => 
+        conn.from !== selectedCircle.id && conn.to !== selectedCircle.id
+      )
+    )
+    
+    // Close the popup
+    closePopup()
+  }
+
   // Add global mouse event listeners
   useEffect(() => {
     const handleMouseMoveGlobal = (e) => {
@@ -915,22 +933,27 @@ function App() {
       {selectedCircle && (
         <div className="popup-overlay" onClick={closePopup}>
           <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+            {/* X button to close modal */}
+            <button className="popup-close-btn" onClick={closePopup}>×</button>
+            
             <div className="popup-circle">
               <span className="popup-circle-value">{selectedCircle.value}</span>
               <span className="popup-circle-address">{selectedCircle.address}</span>
             </div>
-            <div className="popup-text">Connect to?</div>
-            <input
-              type="text"
-              placeholder="ENTER ADDRESS"
-              value={connectToAddress}
-              onChange={(e) => setConnectToAddress(e.target.value)}
-              className="popup-input"
-              autoFocus
-            />
-            <div className="popup-buttons">
-              <button onClick={handleConnect} className="popup-button">Connect</button>
-              <button onClick={closePopup} className="popup-button">Cancel</button>
+            <div className="popup-form-container">
+              <div className="popup-text">Connect to?</div>
+              <input
+                type="text"
+                placeholder="Enter Address"
+                value={connectToAddress}
+                onChange={(e) => setConnectToAddress(e.target.value)}
+                className="popup-input"
+                autoFocus
+              />
+              <div className="popup-buttons">
+                <button onClick={handleConnect} className="popup-button connect-btn">CONNECT</button>
+                <button onClick={handleDeleteCircle} className="popup-button delete-btn">DELETE</button>
+              </div>
             </div>
           </div>
         </div>
