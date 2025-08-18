@@ -893,23 +893,25 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: transparent;
   color: #000;
   font-weight: bold;
   position: relative;
-  border: none;
+  border: 3px dashed #666;
 }
 
-.user-node.correct {
-  background: #fff;
-  border: 3px solid #4caf50;
+/* Only animate nodes that have content (not missing) */
+.validation-overlay .user-node.correct {
+  animation: showCorrectNode 0.5s ease-in-out forwards;
+  animation-delay: inherit;
 }
 
-.user-node.incorrect {
-  background: #fff;
-  border: 3px solid #f44336;
+.validation-overlay .user-node.incorrect {
+  animation: showIncorrectNode 0.5s ease-in-out forwards;
+  animation-delay: inherit;
 }
 
+/* Missing nodes stay as dashed circles */
 .user-node.missing {
   background: transparent;
   border: 3px dashed #666;
@@ -926,6 +928,90 @@
   font-size: 12px;
   font-weight: normal;
   opacity: 0.7;
+}
+
+/* Hide user node content initially and show sequentially */
+.validation-overlay .user-node-value,
+.validation-overlay .user-node-address {
+  opacity: 0;
+  animation: showNodeContent 0.5s ease-in-out forwards;
+}
+
+/* Sequential appearance with 1.5-second intervals for both content and background */
+.validation-overlay .user-cell:nth-child(1) .user-node {
+  animation-delay: 1.5s;
+}
+
+.validation-overlay .user-cell:nth-child(1) .user-node-value,
+.validation-overlay .user-cell:nth-child(1) .user-node-address {
+  animation-delay: 1.5s;
+}
+
+.validation-overlay .user-cell:nth-child(3) .user-node {
+  animation-delay: 3s;
+}
+
+.validation-overlay .user-cell:nth-child(3) .user-node-value,
+.validation-overlay .user-cell:nth-child(3) .user-node-address {
+  animation-delay: 3s;
+}
+
+.validation-overlay .user-cell:nth-child(5) .user-node {
+  animation-delay: 4.5s;
+}
+
+.validation-overlay .user-cell:nth-child(5) .user-node-value,
+.validation-overlay .user-cell:nth-child(5) .user-node-address {
+  animation-delay: 4.5s;
+}
+
+.validation-overlay .user-cell:nth-child(7) .user-node {
+  animation-delay: 12s;
+}
+
+.validation-overlay .user-cell:nth-child(7) .user-node {
+  animation-delay: 6s;
+}
+
+.validation-overlay .user-cell:nth-child(7) .user-node-value,
+.validation-overlay .user-cell:nth-child(7) .user-node-address {
+  animation-delay: 6s;
+}
+
+.validation-overlay .user-cell:nth-child(9) .user-node {
+  animation-delay: 7.5s;
+}
+
+.validation-overlay .user-cell:nth-child(9) .user-node-value,
+.validation-overlay .user-cell:nth-child(9) .user-node-address {
+  animation-delay: 7.5s;
+}
+
+.validation-overlay .user-cell:nth-child(11) .user-node {
+  animation-delay: 9s;
+}
+
+.validation-overlay .user-cell:nth-child(11) .user-node-value,
+.validation-overlay .user-cell:nth-child(11) .user-node-address {
+  animation-delay: 9s;
+}
+
+.validation-overlay .user-cell:nth-child(13) .user-node {
+  animation-delay: 10.5s;
+}
+
+.validation-overlay .user-cell:nth-child(13) .user-node-value,
+.validation-overlay .user-cell:nth-child(13) .user-node-address {
+  animation-delay: 10.5s;
+}
+
+.validation-overlay .user-cell:nth-child(15) .user-node {
+  animation-delay: 12s;
+}
+
+.validation-overlay .user-cell:nth-child(15) .user-node-value,
+.validation-overlay .user-cell:nth-child(15) .user-node-address {
+  animation-delay: 12s;
 }
 
 .chain-arrow {
@@ -1022,4 +1108,39 @@
 .continue-button:hover {
   background-color: #333;
   border-color: #888;
+}
+
+/* Animation for sequential node content reveal */
+@keyframes showNodeContent {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animation for showing node background */
+@keyframes showCorrectNode {
+  0% {
+    background: transparent;
+    border: 3px dashed #666;
+  }
+  100% {
+    background: #fff;
+    border: 3px solid #4caf50;
+  }
+}
+
+@keyframes showIncorrectNode {
+  0% {
+    background: transparent;
+    border: 3px dashed #666;
+  }
+  100% {
+    background: #fff;
+    border: 3px solid #f44336;
+  }
 }
