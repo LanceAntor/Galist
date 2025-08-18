@@ -23,11 +23,17 @@ function App() {
     isVisible: false, 
     canvasWidth: 45 
   })
+  const [isPortalOpen, setIsPortalOpen] = useState(false) // New state for portal open/close
 
   // Wrap setPortalInfo in useCallback to prevent unnecessary re-renders
   const handlePortalStateChange = useCallback((newPortalInfo) => {
     setPortalInfo(newPortalInfo);
   }, []);
+
+  // Portal toggle function
+  const togglePortal = useCallback(() => {
+    setIsPortalOpen(!isPortalOpen);
+  }, [isPortalOpen]);
 
   // Exercise system states
   const exerciseManagerRef = useRef(new ExerciseManager())
@@ -73,6 +79,17 @@ function App() {
     const hasIncoming = connections.some(conn => conn.to === circleId)
     return hasIncoming && !hasOutgoing
   }, [connections])
+
+  // Check if portal button should be enabled (requires at least one head AND one tail node)
+  const hasHeadNode = useCallback(() => {
+    return circles.some(circle => isHeadNode(circle.id));
+  }, [circles, isHeadNode]);
+
+  const hasTailNode = useCallback(() => {
+    return circles.some(circle => isTailNode(circle.id));
+  }, [circles, isTailNode]);
+
+  const isPortalButtonEnabled = isPortalOpen || (hasHeadNode() && hasTailNode());
 
   // Exercise management functions
   const resetWorkspace = useCallback(() => {
@@ -601,7 +618,10 @@ function App() {
       )}
 
       {/* Portal and right square */}
-      <PortalComponent onPortalStateChange={handlePortalStateChange} />
+      <PortalComponent 
+        onPortalStateChange={handlePortalStateChange} 
+        isOpen={isPortalOpen}
+      />
       <div className="right-square" style={{
         outlineOffset: '5px'
       }}></div>
@@ -624,6 +644,13 @@ function App() {
         />
         <button onClick={launchCircle} className="launch-button">
           LUNCH
+        </button>
+        <button 
+          onClick={isPortalButtonEnabled ? togglePortal : undefined} 
+          className={`portal-button ${!isPortalButtonEnabled ? 'disabled' : ''} ${isPortalOpen ? 'open' : ''}`}
+          disabled={!isPortalButtonEnabled}
+        >
+          {isPortalOpen ? 'CLOSE PORTAL' : 'OPEN PORTAL'}
         </button>
       </div>
 

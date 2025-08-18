@@ -418,15 +418,15 @@
 .controls {
   position: absolute;
   bottom: 10px;
-  left: 39%;
+  left: 45%;
   transform: translateX(-50%);
   display: flex;
-  gap: 50px;
+  gap: 40px;
   z-index: 10;
 }
 
 .input-field {
-  padding: 18px 20px;
+  padding: 15px 20px;
   background-color: #d3d3d300;
   border: none;
   color: rgb(255, 255, 255);
@@ -435,7 +435,7 @@
   font-size: 14px;
   border: 3px solid #E4D9FF;
   border-radius: 6px;
-  width: 320px;
+  width: 300px;
 }
 
 .launch-button {
@@ -444,15 +444,75 @@
   color: black;
   font-weight: bold;
   font-size: 14px;
-  width: 320px;
+  width: 300px;
   cursor: pointer;
-  margin-left: 50px;
   transition: background-color 0.2s;
   border-radius: 8px;
 }
 
 .launch-button:hover {
   background-color: #bbb;
+}
+
+.portal-button {
+  padding: 12px 30px;
+  background-color: #555555;
+  color: rgb(0, 0, 0);
+  font-weight: bold;
+  font-size: 14px;
+  width: 300px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 8px;
+  border: none;
+}
+
+.portal-button:hover {
+  background-color: #8c8c8c;
+}
+
+.portal-button.disabled {
+  background-color: #333333;
+  color: #666666;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.portal-button.disabled:hover {
+  background-color: #333333;
+}
+
+/* Open state overrides disabled state */
+.portal-button.open {
+  background-color: #ae08a3 !important;
+  color: white !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  border: 2px solid #bb0faf;
+  box-shadow: 0 0 20px rgba(174, 8, 163, 0.8), 
+              0 0 40px rgba(174, 8, 163, 0.4),
+              inset 0 0 10px rgba(174, 8, 163, 0.3);
+  animation: portal-button-glow 2s ease-in-out infinite alternate;
+}
+
+.portal-button.open:hover {
+  background-color: #bb0faf;
+  box-shadow: 0 0 25px rgba(187, 15, 175, 1), 
+              0 0 50px rgba(187, 15, 175, 0.6),
+              inset 0 0 15px rgba(187, 15, 175, 0.4);
+}
+
+@keyframes portal-button-glow {
+  0% {
+    box-shadow: 0 0 20px rgba(174, 8, 163, 0.8), 
+                0 0 40px rgba(174, 8, 163, 0.4),
+                inset 0 0 10px rgba(174, 8, 163, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(174, 8, 163, 1), 
+                0 0 60px rgba(174, 8, 163, 0.6),
+                inset 0 0 15px rgba(174, 8, 163, 0.5);
+  }
 }
 
 .connection-lines {

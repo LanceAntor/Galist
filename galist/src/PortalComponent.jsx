@@ -1,24 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Portal } from './portal.js';
 
-const PortalComponent = ({ onPortalStateChange }) => {
+const PortalComponent = ({ onPortalStateChange, isOpen }) => {
   const [portal] = useState(new Portal());
-  const [isOpen, setIsOpen] = useState(false); // Start as closed
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const imageRef = useRef(null);
 
-  const handleToggle = () => {
+  // Effect to handle external portal state changes
+  useEffect(() => {
     if (isOpen) {
-      // Close the portal (go to row 3, then back to row 1)
-      portal.closePortal();
-      setIsOpen(false);
-    } else {
-      // Open the portal (go to row 2, then to row 1)
       portal.openPortal();
-      setIsOpen(true);
+    } else {
+      portal.closePortal();
     }
-  };
+  }, [isOpen, portal]);
 
   // Notify parent component about portal state changes
   useEffect(() => {
@@ -104,31 +100,12 @@ const PortalComponent = ({ onPortalStateChange }) => {
     <div 
       style={{
         position: 'absolute',
-        left: '10px',
-        top: '50%',
+        left: '5px',
+        top: '48%',
         transform: 'translateY(-50%)',
         zIndex: 10
       }}
     >
-      {/* Toggle Button */}
-      <button
-        onClick={handleToggle}
-        style={{
-          display: 'block',
-          marginBottom: '10px',
-          padding: '8px 16px',
-          backgroundColor: isOpen ? '#ff4444' : '#44ff44',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 'bold'
-        }}
-      >
-        {isOpen ? 'Close Portal' : 'Open Portal'}
-      </button>
-      
       {/* Portal Canvas - Always visible */}
       <canvas
         ref={canvasRef}
@@ -136,7 +113,7 @@ const PortalComponent = ({ onPortalStateChange }) => {
         height={140} // Increased height to prevent bottom cutoff
         style={{
           imageRendering: 'pixelated',
-          border: '1px solid red'
+          // border: '1px solid red'
         }}
       />
     </div>

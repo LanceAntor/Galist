@@ -133,11 +133,11 @@ export class CollisionDetection {
    * Check collision with controls area
    */
   checkControlsCollision(x, y, circle, velocityX, velocityY) {
-    const controlsHeight = 60;
-    const controlsWidth = 1060;
-    const controlsLeft = window.innerWidth * 0.39 - controlsWidth / 2;
+    const controlsHeight = 55;
+    const controlsWidth = 1320; // Increased width to account for the portal button
+    const controlsLeft = window.innerWidth * 0.45 - controlsWidth / 2; // Adjusted positioning
     const controlsRight = controlsLeft + controlsWidth;
-    const controlsTop = window.innerHeight - 10 - controlsHeight;
+    const controlsTop = window.innerHeight - 5 - controlsHeight;
     const controlsBottom = window.innerHeight - 10;
 
     let newX = x;
