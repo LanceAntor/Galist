@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import { ExerciseManager, EXERCISE_TEMPLATES } from './LinkedListExercise'
 import { collisionDetection } from './CollisionDetection'
@@ -17,6 +17,7 @@ function App() {
   const mouseHistoryRef = useRef([])
   const [suckingCircles, setSuckingCircles] = useState([])
   const [suckedCircles, setSuckedCircles] = useState([]) // Track circles that have been sucked out
+  const [currentEntryOrder, setCurrentEntryOrder] = useState([]) // Track entry order for current submission only
   const [originalSubmission, setOriginalSubmission] = useState(null) // Store original circles and connections for validation
 
   // Portal state management
@@ -97,6 +98,7 @@ function App() {
     setConnections([])
     setSuckingCircles([])
     setSuckedCircles([])
+    setCurrentEntryOrder([])
     setOriginalSubmission(null)
     setShowValidationResult(false)
     setValidationResult(null)
@@ -175,6 +177,10 @@ function App() {
 
   // Function to start chain suction effect
   const startChainSuction = useCallback((startCircleId) => {
+    // Reset sucked circles and entry order for new submission
+    setSuckedCircles([]);
+    setCurrentEntryOrder([]);
+    
     // Capture the original submission data before any circles are sucked
     setOriginalSubmission({
       circles: circles.map(c => ({ ...c })), // Deep copy
@@ -253,8 +259,9 @@ function App() {
                       exerciseManagerRef.current.loadExercise('basic');
                     }
                     
-                    // Get the order in which circles entered the portal
-                    const entryOrder = [...suckedCircles, circle.id];
+                    // Get the order in which circles entered the portal (only for current submission)
+                    // Add this circle to the current entry order
+                    const finalEntryOrder = [...currentEntryOrder, circle.id];
                     
                     // Use the original submission data captured when suction started
                     const submissionData = originalSubmission || {
@@ -270,17 +277,17 @@ function App() {
                         console.log('Submission data:', submissionData);
                         console.log('Original circles length:', submissionData.circles.length);
                         console.log('Current connections length:', submissionData.connections.length);
-                        console.log('Entry order:', entryOrder);
+                        console.log('Entry order:', finalEntryOrder);
                         console.log('About to call validateSubmission with parameters:', {
                           circles: submissionData.circles,
                           connections: submissionData.connections,
-                          entryOrder: entryOrder
+                          entryOrder: finalEntryOrder
                         });
                         
                         const result = exerciseManagerRef.current.validateSubmission(
                           submissionData.circles, 
                           submissionData.connections, 
-                          entryOrder
+                          finalEntryOrder
                         );
                         
                         setValidationResult(result);
@@ -313,8 +320,9 @@ function App() {
                   return newCircles;
                 });
                 
-                // Mark this circle as sucked
+                // Mark this circle as sucked and add to entry order
                 setSuckedCircles(prev => [...prev, circle.id]);
+                setCurrentEntryOrder(prev => [...prev, circle.id]);
                 
                 setSuckingCircles(prev => prev.filter(id => id !== circle.id));
               }, 50);
@@ -428,7 +436,7 @@ function App() {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [portalInfo, suckingCircles, draggedCircle, isHeadNode, startChainSuction, findConnectedCircles, connections, currentExercise, suckedCircles, originalSubmission])
+  }, [portalInfo, suckingCircles, draggedCircle, isHeadNode, startChainSuction, findConnectedCircles, connections, currentExercise, suckedCircles, originalSubmission, currentEntryOrder])
 
   // Handle connection removal when circles are sucked
   useEffect(() => {
@@ -791,30 +799,112 @@ function App() {
       {showValidationResult && validationResult && (
         <div className="validation-overlay">
           <div className="validation-content">
-            <div className={`validation-header ${validationResult.isCorrect ? 'correct' : 'incorrect'}`}>
-              <h2>{validationResult.isCorrect ? '✓ Correct!' : '✗ Incorrect'}</h2>
-              <div className="score">Score: {validationResult.score}%</div>
-            </div>
-            <div className="validation-message">
-              {validationResult.message}
-            </div>
-            {validationResult.details && (
-              <div className="validation-details">
-                {validationResult.details}
+            <div className="validation-header">
+              <div className="score-section">
+                <span className="score-label">Score: {validationResult.score}/100</span>
               </div>
-            )}
+            </div>
+            
+            <div className="expected-results-section">
+              <div className="expected-label">Expected <br></br> Results</div>
+              
+              {/* Show expected results and user answers in table format */}
+              {currentExercise && currentExercise.expectedStructure && originalSubmission && originalSubmission.circles && (
+                <table className="validation-table">
+                  <tbody>
+                    {/* Expected Results Row */}
+                    <tr className="expected-row">
+                      {currentExercise.expectedStructure.map((expectedNode, index) => (
+                        <React.Fragment key={`expected-${expectedNode.value}`}>
+                          <td className="expected-cell">
+                            <div className="expected-value">{expectedNode.value}</div>
+                            <div className="expected-address">{expectedNode.address}</div>
+                          </td>
+                          {index < currentExercise.expectedStructure.length - 1 && (
+                            <td className="arrow-cell-empty"></td>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tr>
+                    
+                    {/* User Answers Row */}
+                    <tr className="user-row">
+                      {(() => {
+                        // Build the user's actual submission chain
+                        const userCircles = originalSubmission.circles;
+                        const userConnections = originalSubmission.connections;
+                        
+                        // Build user chain from their nodes
+                        const userChain = [];
+                        const visited = new Set();
+                        
+                        // Find head node in user's submission
+                        let headCircle = userCircles.find(circle => {
+                          const hasOutgoing = userConnections.some(conn => conn.from === circle.id);
+                          const hasIncoming = userConnections.some(conn => conn.to === circle.id);
+                          return hasOutgoing && !hasIncoming;
+                        });
+                        
+                        // Build user chain
+                        if (headCircle) {
+                          let currentId = headCircle.id;
+                          while (currentId && !visited.has(currentId)) {
+                            visited.add(currentId);
+                            const currentCircle = userCircles.find(c => c.id === currentId);
+                            if (currentCircle) {
+                              userChain.push(currentCircle);
+                            }
+                            const nextConnection = userConnections.find(conn => conn.from === currentId);
+                            currentId = nextConnection ? nextConnection.to : null;
+                          }
+                        }
+                        
+                        // Add any remaining unconnected user nodes
+                        userCircles.forEach(circle => {
+                          if (!visited.has(circle.id)) {
+                            userChain.push(circle);
+                          }
+                        });
+                        
+                        // Create cells for all expected positions
+                        return currentExercise.expectedStructure.map((expectedNode, index) => {
+                          // Find corresponding user node (if any)
+                          const userNode = userChain.find(circle => parseInt(circle.value) === expectedNode.value);
+                          
+                          return (
+                            <React.Fragment key={`user-${expectedNode.value}`}>
+                              <td className="user-cell">
+                                {userNode ? (
+                                  <div className={`user-node ${validationResult.isCorrect ? 'correct' : 'incorrect'}`}>
+                                    <div className="user-node-value">{userNode.value}</div>
+                                    <div className="user-node-address">{userNode.address}</div>
+                                  </div>
+                                ) : (
+                                  <div className="user-node missing">
+                                    <div className="user-node-value">?</div>
+                                    <div className="user-node-address">?</div>
+                                  </div>
+                                )}
+                              </td>
+                              {index < currentExercise.expectedStructure.length - 1 && (
+                                <td className="arrow-cell">→</td>
+                              )}
+                            </React.Fragment>
+                          );
+                        });
+                      })()}
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </div>
+            
             <div className="validation-buttons">
               <button 
                 onClick={() => setShowValidationResult(false)}
-                className="close-validation"
+                className="continue-button"
               >
-                Close
-              </button>
-              <button 
-                onClick={resetWorkspace}
-                className="try-again"
-              >
-                Try Again
+                CONTINUE
               </button>
             </div>
           </div>
