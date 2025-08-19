@@ -8,6 +8,8 @@ function App() {
   const [address, setAddress] = useState('')
   const [value, setValue] = useState('')
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [showInsertButton, setShowInsertButton] = useState(false)
+  const [hoverTimer, setHoverTimer] = useState(null)
   const [circles, setCircles] = useState([])
   const [draggedCircle, setDraggedCircle] = useState(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
@@ -551,6 +553,65 @@ function App() {
     setShowDuplicateModal(false)
   }
 
+  // Handle LUNCH button hover events
+  const handleLunchHoverStart = () => {
+    console.log('Hover started on button container')
+    if (hoverTimer) {
+      clearTimeout(hoverTimer)
+    }
+    const timer = setTimeout(() => {
+      console.log('2 seconds passed, showing INSERT button')
+      setShowInsertButton(true)
+    }, 2000) // 2 seconds
+    setHoverTimer(timer)
+  }
+
+  const handleLunchHoverEnd = () => {
+    console.log('Hover ended on button container')
+    if (hoverTimer) {
+      clearTimeout(hoverTimer)
+      setHoverTimer(null)
+    }
+    // Don't immediately hide the INSERT button
+    // Instead, set a delay to hide it after 3 seconds of no hover
+    if (showInsertButton) {
+      const hideTimer = setTimeout(() => {
+        setShowInsertButton(false)
+      }, 3000) // Hide after 3 seconds
+      setHoverTimer(hideTimer)
+    }
+  }
+
+  // Keep INSERT button visible when hovering over it
+  const handleInsertHover = () => {
+    if (hoverTimer) {
+      clearTimeout(hoverTimer)
+      setHoverTimer(null)
+    }
+  }
+
+  // Hide INSERT button when leaving the insert button area
+  const handleInsertLeave = () => {
+    const hideTimer = setTimeout(() => {
+      setShowInsertButton(false)
+    }, 1000) // Hide after 1 second
+    setHoverTimer(hideTimer)
+  }
+
+  // Handle INSERT button click
+  const handleInsert = () => {
+    // You can customize this function based on what INSERT should do
+    console.log('Insert button clicked')
+    // For now, it does the same as launch
+    launchCircle()
+    // Hide the INSERT button after clicking
+    setShowInsertButton(false)
+    if (hoverTimer) {
+      clearTimeout(hoverTimer)
+      setHoverTimer(null)
+    }
+  }
+
   // Handle circle deletion from popup
   const handleDeleteCircle = () => {
     if (!selectedCircle) return
@@ -840,9 +901,28 @@ function App() {
           onChange={(e) => setValue(e.target.value)}
           className="input-field"
         />
-        <button onClick={launchCircle} className="launch-button">
-          LUNCH
-        </button>
+        <div 
+          className="button-container"
+          onMouseEnter={handleLunchHoverStart}
+          onMouseLeave={handleLunchHoverEnd}
+        >
+          {showInsertButton && (
+            <button 
+              onClick={handleInsert} 
+              className="insert-button"
+              onMouseEnter={handleInsertHover}
+              onMouseLeave={handleInsertLeave}
+            >
+              INSERT
+            </button>
+          )}
+          <button 
+            onClick={launchCircle} 
+            className="launch-button"
+          >
+            LUNCH
+          </button>
+        </div>
         <button 
           onClick={isPortalButtonEnabled ? togglePortal : undefined} 
           className={`portal-button ${!isPortalButtonEnabled ? 'disabled' : ''} ${isPortalOpen ? 'open' : ''}`}
