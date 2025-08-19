@@ -576,6 +576,110 @@ function App() {
         const newX = e.clientX - dragOffset.x
         const newY = e.clientY - dragOffset.y
         
+        // Create a function to find the closest valid position to the target
+        const findValidPosition = (targetX, targetY, currentX, currentY) => {
+          const circleRadius = 30
+          
+          // Check if target position is already valid
+          const isValid = (x, y) => {
+            // Check controls area collision
+            const controlsHeight = 55
+            const controlsWidth = 1320
+            const controlsLeft = window.innerWidth * 0.45 - controlsWidth / 2
+            const controlsRight = controlsLeft + controlsWidth
+            const controlsTop = window.innerHeight - 5 - controlsHeight
+            const controlsBottom = window.innerHeight - 10
+            
+            if (x + circleRadius >= controlsLeft && 
+                x - circleRadius <= controlsRight && 
+                y + circleRadius >= controlsTop && 
+                y - circleRadius <= controlsBottom) {
+              return false
+            }
+            
+            // Check right square collision  
+            const rightSquareSize = 100
+            const rightSquareLeft = window.innerWidth - rightSquareSize
+            const rightSquareRight = window.innerWidth
+            const rightSquareTop = window.innerHeight - rightSquareSize
+            const rightSquareBottom = window.innerHeight
+            
+            if (x + circleRadius >= rightSquareLeft && 
+                x - circleRadius <= rightSquareRight && 
+                y + circleRadius >= rightSquareTop && 
+                y - circleRadius <= rightSquareBottom) {
+              return false
+            }
+            
+            // Check screen boundaries
+            if (x - circleRadius < 0 || 
+                x + circleRadius > window.innerWidth || 
+                y - circleRadius < 0 || 
+                y + circleRadius > window.innerHeight) {
+              return false
+            }
+            
+            // Check collision with other circles
+            const otherCircles = circles.filter(c => c.id !== draggedCircle.id)
+            for (let otherCircle of otherCircles) {
+              const dx = x - otherCircle.x
+              const dy = y - otherCircle.y
+              const distance = Math.sqrt(dx * dx + dy * dy)
+              if (distance < circleRadius * 2) {
+                return false
+              }
+            }
+            
+            return true
+          }
+          
+          // If target position is valid, use it
+          if (isValid(targetX, targetY)) {
+            return { x: targetX, y: targetY }
+          }
+          
+          // Find the closest valid position along the movement path
+          const deltaX = targetX - currentX
+          const deltaY = targetY - currentY
+          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+          
+          if (distance === 0) {
+            return { x: currentX, y: currentY }
+          }
+          
+          // Normalize the direction vector
+          const dirX = deltaX / distance
+          const dirY = deltaY / distance
+          
+          // Binary search for the furthest valid position along the movement path
+          let validDistance = 0
+          let testDistance = distance
+          let step = distance / 2
+          
+          for (let i = 0; i < 20; i++) { // Limit iterations for performance
+            const testX = currentX + dirX * testDistance
+            const testY = currentY + dirY * testDistance
+            
+            if (isValid(testX, testY)) {
+              validDistance = testDistance
+              testDistance += step
+            } else {
+              testDistance -= step
+            }
+            step /= 2
+            
+            if (step < 0.1) break // Good enough precision
+          }
+          
+          return {
+            x: currentX + dirX * validDistance,
+            y: currentY + dirY * validDistance
+          }
+        }
+        
+        // Get the valid position for the new coordinates
+        const validPosition = findValidPosition(newX, newY, draggedCircle.x, draggedCircle.y)
+        
         // Track mouse history for velocity calculation
         const now = Date.now()
         mouseHistoryRef.current.push({
@@ -592,7 +696,7 @@ function App() {
         setCircles(prevCircles =>
           prevCircles.map(circle =>
             circle.id === draggedCircle.id
-              ? { ...circle, x: newX, y: newY, velocityX: 0, velocityY: 0 }
+              ? { ...circle, x: validPosition.x, y: validPosition.y, velocityX: 0, velocityY: 0 }
               : circle
           )
         )
@@ -641,7 +745,7 @@ function App() {
       document.removeEventListener('mousemove', handleMouseMoveGlobal)
       document.removeEventListener('mouseup', handleMouseUpGlobal)
     }
-  }, [draggedCircle, dragOffset, findConnectedCircles])
+  }, [draggedCircle, dragOffset, findConnectedCircles, circles])
 
   const launchCircle = () => {
     if (!address.trim() || !value.trim()) return
@@ -681,8 +785,7 @@ function App() {
         onError={(e) => console.error('Video error:', e)}
         onLoadedData={() => console.log('Video loaded successfully')}
       >
-        <source src="/video/selection_bg.mp4" type="video/mp4" />
-        <source src="./video/selection_bg.mp4" type="video/mp4" />
+        <source src="./video/space.mp4" type="video/mp4" />
         Your browser does not support the video tag.
       </video>
 
