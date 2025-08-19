@@ -1371,3 +1371,92 @@
   color: #ccc;
   line-height: 1.4;
 }
+
+/* Insert Modal Styles */
+.insert-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.insert-modal-content {
+  background-color: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 15px;
+  padding: 40px;
+  position: relative;
+  width: 90%;
+  max-width: 800px;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.insert-modal-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.insert-modal-close-btn:hover {
+  background: #ff6666;
+}
+
+.insert-options {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.insert-option-btn {
+  background-color: #666666;
+  border: none;
+  border-radius: 15px;
+  padding: 40px 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: black;
+  font-family: Arial, sans-serif;
+  min-width: 200px;
+  flex: 1;
+  max-width: 250px;
+}
+
+.insert-option-btn:hover {
+  background-color: #777777;
+  transform: translateY(-2px);
+}
+
+.option-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.option-subtitle {
+  font-size: 14px;
+  text-align: center;
+  color: #333;
+  line-height: 1.3;
+}

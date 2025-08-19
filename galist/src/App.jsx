@@ -9,6 +9,7 @@ function App() {
   const [value, setValue] = useState('')
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [showInsertButton, setShowInsertButton] = useState(false)
+  const [showInsertModal, setShowInsertModal] = useState(false)
   const [hoverTimer, setHoverTimer] = useState(null)
   const [circles, setCircles] = useState([])
   const [draggedCircle, setDraggedCircle] = useState(null)
@@ -600,16 +601,131 @@ function App() {
 
   // Handle INSERT button click
   const handleInsert = () => {
-    // You can customize this function based on what INSERT should do
     console.log('Insert button clicked')
-    // For now, it does the same as launch
-    launchCircle()
+    // Open the insert modal instead of directly launching
+    setShowInsertModal(true)
     // Hide the INSERT button after clicking
     setShowInsertButton(false)
     if (hoverTimer) {
       clearTimeout(hoverTimer)
       setHoverTimer(null)
     }
+  }
+
+  // Close insert modal
+  const closeInsertModal = () => {
+    setShowInsertModal(false)
+  }
+
+  // Handle insert option selection
+  const handleInsertOption = (option) => {
+    console.log('Insert option selected:', option)
+    
+    // Check if address and value are provided
+    if (!address.trim() || !value.trim()) {
+      alert('Please enter both address and value before inserting')
+      return
+    }
+    
+    // Check for duplicate address
+    const addressExists = circles.some(circle => circle.address === address.trim())
+    if (addressExists) {
+      setShowDuplicateModal(true)
+      closeInsertModal()
+      return
+    }
+    
+    switch(option) {
+      case 'head':
+        handleHeadInsertion()
+        break
+      case 'specific':
+        // Insert at specific position logic (to be implemented)
+        break
+      case 'tail':
+        handleTailInsertion()
+        break
+      default:
+        break
+    }
+    
+    closeInsertModal()
+  }
+  
+  // Handle HEAD insertion
+  const handleHeadInsertion = () => {
+    // Create the new head node
+    const newHead = {
+      id: Date.now(),
+      address: address.trim(),
+      value: value.trim(),
+      x: window.innerWidth - 10, // Right edge of right square
+      y: window.innerHeight - 55, // Center of right square vertically
+      velocityX: -8 - Math.random() * 5, // Launch leftward with random velocity
+      velocityY: -5 - Math.random() * 3 // Launch upward with random velocity
+    }
+    
+    // Find current head node(s)
+    const currentHeads = circles.filter(circle => isHeadNode(circle.id))
+    
+    // Add the new circle
+    setCircles(prev => [...prev, newHead])
+    
+    // Create connections from new head to all current heads
+    if (currentHeads.length > 0) {
+      const newConnections = currentHeads.map(head => ({
+        id: Date.now() + Math.random(), // Ensure unique IDs
+        from: newHead.id,
+        to: head.id
+      }))
+      
+      setConnections(prev => [...prev, ...newConnections])
+    }
+    
+    // Clear input fields
+    setAddress('')
+    setValue('')
+    
+    console.log('New head node created:', newHead)
+    console.log('Connected to previous heads:', currentHeads)
+  }
+  
+  // Handle TAIL insertion
+  const handleTailInsertion = () => {
+    // Create the new tail node
+    const newTail = {
+      id: Date.now(),
+      address: address.trim(),
+      value: value.trim(),
+      x: window.innerWidth - 10, // Right edge of right square
+      y: window.innerHeight - 55, // Center of right square vertically
+      velocityX: -8 - Math.random() * 5, // Launch leftward with random velocity
+      velocityY: -5 - Math.random() * 3 // Launch upward with random velocity
+    }
+    
+    // Find current tail node(s)
+    const currentTails = circles.filter(circle => isTailNode(circle.id))
+    
+    // Add the new circle
+    setCircles(prev => [...prev, newTail])
+    
+    // Create connections from all current tails to the new tail
+    if (currentTails.length > 0) {
+      const newConnections = currentTails.map(tail => ({
+        id: Date.now() + Math.random(), // Ensure unique IDs
+        from: tail.id,
+        to: newTail.id
+      }))
+      
+      setConnections(prev => [...prev, ...newConnections])
+    }
+    
+    // Clear input fields
+    setAddress('')
+    setValue('')
+    
+    console.log('New tail node created:', newTail)
+    console.log('Connected from previous tails:', currentTails)
   }
 
   // Handle circle deletion from popup
@@ -1167,6 +1283,42 @@ function App() {
             </div>
             <div className="error-title">Duplicate Address</div>
             <div className="error-message-text">Nodes cannot have the same address</div>
+          </div>
+        </div>
+      )}
+
+      {/* Insert Position Modal */}
+      {showInsertModal && (
+        <div className="insert-modal-overlay" onClick={closeInsertModal}>
+          <div className="insert-modal-content" onClick={(e) => e.stopPropagation()}>
+            {/* X button to close modal */}
+            <button className="insert-modal-close-btn" onClick={closeInsertModal}>×</button>
+            
+            <div className="insert-options">
+              <button 
+                className="insert-option-btn head-btn" 
+                onClick={() => handleInsertOption('head')}
+              >
+                <div className="option-title">HEAD</div>
+                <div className="option-subtitle">i = 0 (Head)</div>
+              </button>
+              
+              <button 
+                className="insert-option-btn specific-btn" 
+                onClick={() => handleInsertOption('specific')}
+              >
+                <div className="option-title">SPECIFIC</div>
+                <div className="option-subtitle">specify both i in [1, N-1]</div>
+              </button>
+              
+              <button 
+                className="insert-option-btn tail-btn" 
+                onClick={() => handleInsertOption('tail')}
+              >
+                <div className="option-title">TAIL</div>
+                <div className="option-subtitle">i = N (After Tail)</div>
+              </button>
+            </div>
           </div>
         </div>
       )}
