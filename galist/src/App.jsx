@@ -326,9 +326,19 @@ function App() {
                   return newCircles;
                 });
                 
-                // Mark this circle as sucked and add to entry order
-                setSuckedCircles(prev => [...prev, circle.id]);
-                setCurrentEntryOrder(prev => [...prev, circle.id]);
+                // Mark this circle as sucked and add to entry order (only if not already added)
+                setSuckedCircles(prev => {
+                  if (!prev.includes(circle.id)) {
+                    return [...prev, circle.id];
+                  }
+                  return prev;
+                });
+                setCurrentEntryOrder(prev => {
+                  if (!prev.includes(circle.id)) {
+                    return [...prev, circle.id];
+                  }
+                  return prev;
+                });
                 
                 setSuckingCircles(prev => prev.filter(id => id !== circle.id));
               }, 50);
