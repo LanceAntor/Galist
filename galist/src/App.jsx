@@ -10,6 +10,8 @@ function App() {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [showInsertButton, setShowInsertButton] = useState(false)
   const [showInsertModal, setShowInsertModal] = useState(false)
+  const [showIndexModal, setShowIndexModal] = useState(false)
+  const [insertIndex, setInsertIndex] = useState('')
   const [hoverTimer, setHoverTimer] = useState(null)
   const [circles, setCircles] = useState([])
   const [draggedCircle, setDraggedCircle] = useState(null)
@@ -556,7 +558,7 @@ function App() {
 
   // Handle LUNCH button hover events
   const handleLunchHoverStart = () => {
-    console.log('Hover started on button container')
+    console.log('Hover started on LUNCH button')
     if (hoverTimer) {
       clearTimeout(hoverTimer)
     }
@@ -568,23 +570,23 @@ function App() {
   }
 
   const handleLunchHoverEnd = () => {
-    console.log('Hover ended on button container')
+    console.log('Hover ended on LUNCH button')
     if (hoverTimer) {
       clearTimeout(hoverTimer)
       setHoverTimer(null)
     }
-    // Don't immediately hide the INSERT button
-    // Instead, set a delay to hide it after 3 seconds of no hover
-    if (showInsertButton) {
-      const hideTimer = setTimeout(() => {
-        setShowInsertButton(false)
-      }, 3000) // Hide after 3 seconds
-      setHoverTimer(hideTimer)
-    }
+    
+    // Set a very short delay to allow mouse to move to INSERT button
+    const hideTimer = setTimeout(() => {
+      setShowInsertButton(false)
+    }, 100) // Very short delay (100ms) to allow transition to INSERT
+    setHoverTimer(hideTimer)
   }
 
   // Keep INSERT button visible when hovering over it
   const handleInsertHover = () => {
+    console.log('Hover started on INSERT button')
+    // Cancel any pending hide timer
     if (hoverTimer) {
       clearTimeout(hoverTimer)
       setHoverTimer(null)
@@ -593,18 +595,8 @@ function App() {
 
   // Hide INSERT button when leaving the insert button area
   const handleInsertLeave = () => {
-    const hideTimer = setTimeout(() => {
-      setShowInsertButton(false)
-    }, 1000) // Hide after 1 second
-    setHoverTimer(hideTimer)
-  }
-
-  // Handle INSERT button click
-  const handleInsert = () => {
-    console.log('Insert button clicked')
-    // Open the insert modal instead of directly launching
-    setShowInsertModal(true)
-    // Hide the INSERT button after clicking
+    console.log('Hover ended on INSERT button')
+    // Immediately hide when leaving INSERT button
     setShowInsertButton(false)
     if (hoverTimer) {
       clearTimeout(hoverTimer)
@@ -612,9 +604,55 @@ function App() {
     }
   }
 
+  // Handle INSERT button click
+  const handleInsert = () => {
+    console.log('Insert button clicked')
+    
+    // Immediately hide the INSERT button when clicked
+    setShowInsertButton(false)
+    if (hoverTimer) {
+      clearTimeout(hoverTimer)
+      setHoverTimer(null)
+    }
+    
+    // Open the insert modal
+    setShowInsertModal(true)
+  }
+
   // Close insert modal
   const closeInsertModal = () => {
     setShowInsertModal(false)
+  }
+
+  // Close index modal
+  const closeIndexModal = () => {
+    setShowIndexModal(false)
+    setInsertIndex('')
+  }
+
+  // Handle index submission
+  const handleIndexSubmit = () => {
+    const index = parseInt(insertIndex.trim())
+    
+    // Validate index
+    if (isNaN(index) || index < 1) {
+      alert('Please enter a valid index (must be >= 1)')
+      return
+    }
+    
+    // Get the total number of nodes in the longest chain
+    const maxIndex = circles.length
+    if (index > maxIndex) {
+      alert(`Index too large. Maximum index is ${maxIndex}`)
+      return
+    }
+    
+    // Handle specific insertion
+    handleSpecificInsertion(index)
+    
+    // Close both modals
+    closeIndexModal()
+    closeInsertModal()
   }
 
   // Handle insert option selection
@@ -640,7 +678,8 @@ function App() {
         handleHeadInsertion()
         break
       case 'specific':
-        // Insert at specific position logic (to be implemented)
+        // Open the index input modal for specific position
+        setShowIndexModal(true)
         break
       case 'tail':
         handleTailInsertion()
@@ -726,6 +765,109 @@ function App() {
     
     console.log('New tail node created:', newTail)
     console.log('Connected from previous tails:', currentTails)
+  }
+  
+  // Handle SPECIFIC insertion at given index
+  const handleSpecificInsertion = (index) => {
+    const targetIndex = parseInt(index)
+    
+    // Validate index
+    if (isNaN(targetIndex) || targetIndex < 0) {
+      console.error('Invalid index for insertion')
+      return
+    }
+    
+    // Create the new node
+    const newNode = {
+      id: Date.now(),
+      address: address.trim(),
+      value: value.trim(),
+      x: window.innerWidth - 10, // Right edge of right square
+      y: window.innerHeight - 55, // Center of right square vertically
+      velocityX: -8 - Math.random() * 5, // Launch leftward with random velocity
+      velocityY: -5 - Math.random() * 3 // Launch upward with random velocity
+    }
+    
+    // Find the head node(s) to start traversal
+    const headNodes = circles.filter(circle => isHeadNode(circle.id))
+    
+    if (headNodes.length === 0) {
+      // No existing linked list - this becomes the first node
+      setCircles(prev => [...prev, newNode])
+      console.log('First node created:', newNode)
+    } else if (targetIndex === 0) {
+      // Insert at head position
+      setCircles(prev => [...prev, newNode])
+      
+      // Connect new node to all current heads
+      const newConnections = headNodes.map(head => ({
+        id: Date.now() + Math.random(),
+        from: newNode.id,
+        to: head.id
+      }))
+      
+      setConnections(prev => [...prev, ...newConnections])
+      console.log('Inserted at head position (index 0):', newNode)
+    } else {
+      // Insert at specific position > 0
+      // Use the first head node for traversal
+      const startHead = headNodes[0]
+      const chainOrder = getChainOrder(startHead.id)
+      
+      if (targetIndex >= chainOrder.length) {
+        // Insert at tail position
+        const currentTails = circles.filter(circle => isTailNode(circle.id))
+        setCircles(prev => [...prev, newNode])
+        
+        if (currentTails.length > 0) {
+          const newConnections = currentTails.map(tail => ({
+            id: Date.now() + Math.random(),
+            from: tail.id,
+            to: newNode.id
+          }))
+          setConnections(prev => [...prev, ...newConnections])
+        }
+        console.log('Inserted at tail position (index >= length):', newNode)
+      } else {
+        // Insert in the middle of the chain
+        const prevNodeId = chainOrder[targetIndex - 1]
+        const nextNodeId = chainOrder[targetIndex]
+        
+        setCircles(prev => [...prev, newNode])
+        
+        // Find and remove the existing connection between prev and next
+        setConnections(prev => {
+          const updatedConnections = prev.filter(conn => 
+            !(conn.from === prevNodeId && conn.to === nextNodeId)
+          )
+          
+          // Add new connections: prev -> newNode -> next
+          const newConnections = [
+            {
+              id: Date.now() + Math.random(),
+              from: prevNodeId,
+              to: newNode.id
+            },
+            {
+              id: Date.now() + Math.random() + 0.001,
+              from: newNode.id,
+              to: nextNodeId
+            }
+          ]
+          
+          return [...updatedConnections, ...newConnections]
+        })
+        
+        console.log(`Inserted at index ${targetIndex} between nodes:`, prevNodeId, 'and', nextNodeId)
+      }
+    }
+    
+    // Clear input fields
+    setAddress('')
+    setValue('')
+    setInsertIndex('')
+    
+    console.log('New node created at specific position:', newNode)
   }
 
   // Handle circle deletion from popup
@@ -1017,11 +1159,7 @@ function App() {
           onChange={(e) => setValue(e.target.value)}
           className="input-field"
         />
-        <div 
-          className="button-container"
-          onMouseEnter={handleLunchHoverStart}
-          onMouseLeave={handleLunchHoverEnd}
-        >
+        <div className="button-container">
           {showInsertButton && (
             <button 
               onClick={handleInsert} 
@@ -1035,6 +1173,8 @@ function App() {
           <button 
             onClick={launchCircle} 
             className="launch-button"
+            onMouseEnter={handleLunchHoverStart}
+            onMouseLeave={handleLunchHoverEnd}
           >
             LUNCH
           </button>
@@ -1319,6 +1459,30 @@ function App() {
                 <div className="option-subtitle">i = N (After Tail)</div>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Index Input Modal */}
+      {showIndexModal && (
+        <div className="index-modal-overlay" onClick={closeIndexModal}>
+          <div className="index-modal-content" onClick={(e) => e.stopPropagation()}>
+            {/* X button to close modal */}
+            <button className="index-modal-close-btn" onClick={closeIndexModal}>×</button>
+            
+            <div className="index-modal-title">Index</div>
+            <div className="index-input-container">
+              <input
+                type="text"
+                placeholder="Enter Index"
+                value={insertIndex}
+                onChange={(e) => setInsertIndex(e.target.value)}
+                className="index-input"
+                autoFocus
+              />
+              <button onClick={handleIndexSubmit} className="index-go-btn">Go</button>
+            </div>
+            <div className="index-subtitle">specify both i in [1, N-1]</div>
           </div>
         </div>
       )}

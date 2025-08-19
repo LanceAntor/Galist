@@ -1460,3 +1460,110 @@
   color: #333;
   line-height: 1.3;
 }
+
+/* Index Modal Styles */
+.index-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.index-modal-content {
+  background-color: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 15px;
+  padding: 40px;
+  position: relative;
+  width: 90%;
+  max-width: 500px;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+.index-modal-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.index-modal-close-btn:hover {
+  background: #ff6666;
+}
+
+.index-modal-title {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 30px;
+  color: white;
+}
+
+.index-input-container {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.index-input {
+  background-color: #333;
+  border: 1px solid #555;
+  border-radius: 5px;
+  padding: 15px 20px;
+  color: white;
+  font-size: 16px;
+  width: 300px;
+  outline: none;
+}
+
+.index-input:focus {
+  border-color: #777;
+}
+
+.index-input::placeholder {
+  color: #aaa;
+  font-style: italic;
+}
+
+.index-go-btn {
+  background-color: #666;
+  border: none;
+  border-radius: 5px;
+  padding: 15px 30px;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.index-go-btn:hover {
+  background-color: #777;
+}
+
+.index-subtitle {
+  font-size: 14px;
+  color: #aaa;
+  margin-top: 10px;
+}
