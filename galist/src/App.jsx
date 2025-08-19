@@ -870,22 +870,101 @@ function App() {
     console.log('New node created at specific position:', newNode)
   }
 
+  // Helper function to analyze and optimize connections after deletion
+  const optimizeConnectionsAfterDeletion = (connections) => {
+    // Remove any duplicate connections that might be created
+    const connectionMap = new Map()
+    
+    connections.forEach(conn => {
+      const key = `${conn.from}-${conn.to}`
+      if (!connectionMap.has(key)) {
+        connectionMap.set(key, conn)
+      }
+    })
+    
+    return Array.from(connectionMap.values())
+  }
+
   // Handle circle deletion from popup
   const handleDeleteCircle = () => {
     if (!selectedCircle) return
     
-    // Remove the circle
-    setCircles(prevCircles => prevCircles.filter(circle => circle.id !== selectedCircle.id))
+    const nodeToDelete = selectedCircle.id
     
-    // Remove any connections involving this circle
-    setConnections(prevConnections => 
-      prevConnections.filter(conn => 
-        conn.from !== selectedCircle.id && conn.to !== selectedCircle.id
+    // Find all connections involving this node
+    const incomingConnections = connections.filter(conn => conn.to === nodeToDelete)
+    const outgoingConnections = connections.filter(conn => conn.from === nodeToDelete)
+    
+    // Determine what type of node this is
+    const isHead = isHeadNode(nodeToDelete)
+    const isTail = isTailNode(nodeToDelete)
+    const isMiddle = incomingConnections.length > 0 && outgoingConnections.length > 0
+    const isIsolated = incomingConnections.length === 0 && outgoingConnections.length === 0
+    
+    console.log(`Deleting node ${nodeToDelete}:`, { isHead, isTail, isMiddle, isIsolated })
+    
+    // Remove the circle
+    setCircles(prevCircles => prevCircles.filter(circle => circle.id !== nodeToDelete))
+    
+    // Handle connection adjustments based on node type
+    setConnections(prevConnections => {
+      // Remove all connections involving the deleted node
+      let updatedConnections = prevConnections.filter(conn => 
+        conn.from !== nodeToDelete && conn.to !== nodeToDelete
       )
-    )
+      
+      if (isMiddle) {
+        // Middle node: connect all incoming nodes to all outgoing nodes
+        const newConnections = []
+        incomingConnections.forEach(inConn => {
+          outgoingConnections.forEach(outConn => {
+            // Avoid creating self-loops
+            if (inConn.from !== outConn.to) {
+              newConnections.push({
+                id: Date.now() + Math.random(),
+                from: inConn.from,
+                to: outConn.to
+              })
+            }
+          })
+        })
+        
+        updatedConnections = [...updatedConnections, ...newConnections]
+        console.log(`Middle node deleted: Created ${newConnections.length} bridge connections`)
+        
+      } else if (isHead && outgoingConnections.length > 0) {
+        // Head node: the next nodes become new heads (no additional connections needed)
+        // If there are multiple outgoing connections, all target nodes become independent heads
+        const newHeadIds = outgoingConnections.map(conn => conn.to)
+        console.log('Head node deleted: Next nodes become new heads:', newHeadIds)
+        
+      } else if (isTail && incomingConnections.length > 0) {
+        // Tail node: the previous nodes become new tails (no additional connections needed)
+        // If there are multiple incoming connections, all source nodes become independent tails
+        const newTailIds = incomingConnections.map(conn => conn.from)
+        console.log('Tail node deleted: Previous nodes become new tails:', newTailIds)
+        
+      } else if (incomingConnections.length > 0 && outgoingConnections.length === 0) {
+        // Node with only incoming connections (like a tail but might be in a branched structure)
+        console.log('End node deleted: Previous nodes become new endpoints')
+        
+      } else if (incomingConnections.length === 0 && outgoingConnections.length > 0) {
+        // Node with only outgoing connections (like a head but might be in a branched structure)
+        console.log('Start node deleted: Next nodes become new starting points')
+        
+      } else if (isIsolated) {
+        // Isolated node: no connection adjustments needed
+        console.log('Isolated node deleted: No connection adjustments needed')
+      }
+      
+      // Optimize connections to remove any duplicates
+      return optimizeConnectionsAfterDeletion(updatedConnections)
+    })
     
     // Close the popup
     closePopup()
+    
+    console.log(`Node ${nodeToDelete} successfully deleted with connection adjustments`)
   }
 
   // Add global mouse event listeners
