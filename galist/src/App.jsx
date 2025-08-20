@@ -1571,7 +1571,7 @@ function App() {
               />
               <button onClick={handleIndexSubmit} className="index-go-btn">Go</button>
             </div>
-            <div className="index-subtitle">specify both i in [1, N-1]</div>
+           
           </div>
         </div>
       )}
