@@ -367,7 +367,7 @@
 }
 
 .left-square.open::after {
-  content: '';
+  content: "";
   position: absolute;
   right: -5px;
   top: 10px;
@@ -440,7 +440,7 @@
   font-weight: bold;
   text-align: center;
   font-size: 14px;
-  border: 3px solid #E4D9FF;
+  border: 3px solid #e4d9ff;
   border-radius: 6px;
   width: 300px;
 }
@@ -463,9 +463,16 @@
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .launch-button {
@@ -566,29 +573,25 @@
   cursor: pointer !important;
   opacity: 1 !important;
   border: 2px solid #bb0faf;
-  box-shadow: 0 0 20px rgba(174, 8, 163, 0.8), 
-              0 0 40px rgba(174, 8, 163, 0.4),
-              inset 0 0 10px rgba(174, 8, 163, 0.3);
+  box-shadow: 0 0 20px rgba(174, 8, 163, 0.8), 0 0 40px rgba(174, 8, 163, 0.4),
+    inset 0 0 10px rgba(174, 8, 163, 0.3);
   animation: portal-button-glow 2s ease-in-out infinite alternate;
 }
 
 .portal-button.open:hover {
   background-color: #bb0faf;
-  box-shadow: 0 0 25px rgba(187, 15, 175, 1), 
-              0 0 50px rgba(187, 15, 175, 0.6),
-              inset 0 0 15px rgba(187, 15, 175, 0.4);
+  box-shadow: 0 0 25px rgba(187, 15, 175, 1), 0 0 50px rgba(187, 15, 175, 0.6),
+    inset 0 0 15px rgba(187, 15, 175, 0.4);
 }
 
 @keyframes portal-button-glow {
   0% {
-    box-shadow: 0 0 20px rgba(174, 8, 163, 0.8), 
-                0 0 40px rgba(174, 8, 163, 0.4),
-                inset 0 0 10px rgba(174, 8, 163, 0.3);
+    box-shadow: 0 0 20px rgba(174, 8, 163, 0.8), 0 0 40px rgba(174, 8, 163, 0.4),
+      inset 0 0 10px rgba(174, 8, 163, 0.3);
   }
   100% {
-    box-shadow: 0 0 30px rgba(174, 8, 163, 1), 
-                0 0 60px rgba(174, 8, 163, 0.6),
-                inset 0 0 15px rgba(174, 8, 163, 0.5);
+    box-shadow: 0 0 30px rgba(174, 8, 163, 1), 0 0 60px rgba(174, 8, 163, 0.6),
+      inset 0 0 15px rgba(174, 8, 163, 0.5);
   }
 }
 
@@ -1370,6 +1373,84 @@
   font-size: 16px;
   color: #ccc;
   line-height: 1.4;
+}
+
+/* ===== Game Menu Overlay ===== */
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+      circle at 30% 20%,
+      rgba(255, 200, 150, 0.08),
+      rgba(0, 0, 0, 0.9) 60%
+    ),
+    rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(2px);
+}
+
+.menu-content {
+  background: rgba(10, 10, 10, 0.7);
+  border: 1px solid #555;
+  border-radius: 16px;
+  padding: 40px 50px;
+  width: min(560px, 90vw);
+  text-align: center;
+  box-shadow: 0 0 30px rgba(255, 165, 0, 0.2), 0 0 60px rgba(255, 90, 0, 0.15);
+}
+
+.menu-title {
+  margin: 0 0 8px;
+  font-size: 40px;
+  letter-spacing: 1px;
+  color: #ffd699;
+  text-shadow: 0 0 10px rgba(255, 140, 0, 0.4);
+}
+
+.menu-subtitle {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: #ddd;
+  opacity: 0.8;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.menu-button {
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: 1px solid #666;
+  background: linear-gradient(180deg, #2b2b2b, #1a1a1a);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.menu-button:hover {
+  transform: translateY(-1px);
+  border-color: #999;
+  box-shadow: 0 0 0 2px rgba(255, 180, 0, 0.1), 0 0 18px rgba(255, 120, 0, 0.25);
+}
+
+.menu-button.primary {
+  border-color: #ff8c00;
+  background: linear-gradient(180deg, #ffb347, #ff8c00);
+  color: #1a1a1a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.menu-button.primary:hover {
+  box-shadow: 0 0 0 3px rgba(255, 200, 120, 0.25),
+    0 0 28px rgba(255, 120, 0, 0.45);
 }
 
 /* Insert Modal Styles */
