@@ -1,12 +1,12 @@
 import React from "react";
-import "./GameMenu.css";
+import styles from "./GameMenu.module.css";
 
 function GameMenu({ onStart }) {
   return (
-    <div className="game-menu-overlay" role="dialog" aria-modal="true">
+    <div className={styles.gameMenuOverlay} role="dialog" aria-modal="true">
       {/* Background video */}
       <video
-        className="menu-video"
+        className={styles.menuVideo}
         autoPlay
         loop
         muted
@@ -17,16 +17,19 @@ function GameMenu({ onStart }) {
       </video>
 
       {/* Content */}
-      <div className="menu-content">
-        <h1 className="menu-title">Galist</h1>
-        <p className="menu-subtitle">Galaxy Linked List</p>
+      <div className={styles.menuContent}>
+        <h1 className={styles.menuTitle}>Galist</h1>
+        <p className={styles.menuSubtitle}>Galaxy Linked List</p>
 
-        <div className="menu-buttons">
-          <button className="menu-btn primary" onClick={onStart}>
+        <div className={styles.menuButtons}>
+          <button
+            className={`${styles.menuBtn} ${styles.primary}`}
+            onClick={onStart}
+          >
             Start Game
           </button>
-          <button className="menu-btn">Tutorial</button>
-          <button className="menu-btn">Leaderboards</button>
+          <button className={styles.menuBtn}>Tutorial</button>
+          <button className={styles.menuBtn}>Leaderboards</button>
         </div>
       </div>
     </div>
